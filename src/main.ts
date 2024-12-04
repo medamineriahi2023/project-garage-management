@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { RouterModule, Routes, provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
 import { DashboardComponent } from './app/components/dashboard/dashboard.component';
 import { ServicesComponent } from './app/components/services/services.component';
 import { StockComponent } from './app/components/stock/stock.component';
@@ -80,6 +81,7 @@ export class App {
 bootstrapApplication(App, {
   providers: [
     provideAnimations(),
-    provideRouter(routes)
+    provideRouter(routes),
+    provideHttpClient()
   ]
 });

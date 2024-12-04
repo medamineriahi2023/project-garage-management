@@ -8,8 +8,10 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Service } from '../../models/service.model';
-import { MockDataService } from '../../services/mock-data.service';
+import { ServiceApiService } from '../../services/api/service.service';
 import { FR } from '../../i18n/fr';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 
 @Component({
   selector: 'app-services',
@@ -22,21 +24,33 @@ import { FR } from '../../i18n/fr';
     InputTextModule,
     InputNumberModule,
     DialogModule,
-    TooltipModule
+    TooltipModule,
+    ToastModule
   ],
+  providers: [MessageService],
   template: `
+    <p-toast></p-toast>
     <div class="card">
       <div class="flex justify-content-between align-items-center mb-4">
         <h2 class="text-2xl font-semibold text-primary m-0">
           <i class="pi pi-cog mr-2"></i>{{i18n.services.title}}
         </h2>
-        <button pButton [label]="i18n.services.addService" icon="pi pi-plus" 
-                (click)="showDialog()" class="p-button-primary"></button>
+        <button pButton [label]="i18n.services.addService" 
+                icon="pi pi-plus" 
+                (click)="showDialog()"></button>
       </div>
 
-      <p-table [value]="services" [tableStyle]="{ 'min-width': '50rem' }"
-               [paginator]="true" [rows]="5" [showCurrentPageReport]="true"
-               styleClass="p-datatable-gridlines p-datatable-striped">
+      <p-table [value]="services" 
+               [lazy]="true"
+               (onLazyLoad)="loadServices($event)"
+               [paginator]="true" 
+               [rows]="10"
+               [totalRecords]="totalRecords"
+               [loading]="loading"
+               [showCurrentPageReport]="true"
+               currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+               [rowsPerPageOptions]="[5,10,25,50]"
+               styleClass="p-datatable-gridlines">
         <ng-template pTemplate="header">
           <tr>
             <th>{{i18n.common.id}}</th>
@@ -65,8 +79,10 @@ import { FR } from '../../i18n/fr';
         </ng-template>
       </p-table>
 
-      <p-dialog [header]="i18n.services.addService" [(visible)]="displayDialog"
-                [style]="{width: '450px'}" [modal]="true"
+      <p-dialog [header]="i18n.services.addService" 
+                [(visible)]="displayDialog"
+                [style]="{width: '450px'}" 
+                [modal]="true"
                 styleClass="p-fluid">
         <div class="flex flex-column gap-3 pt-3">
           <div class="field">
@@ -80,16 +96,18 @@ import { FR } from '../../i18n/fr';
             <label for="price" class="font-medium">{{i18n.services.servicePrice}}</label>
             <p-inputNumber id="price" 
                           [(ngModel)]="newService.price"
-                          mode="currency" currency="TND"
+                          mode="currency" 
+                          currency="TND"
                           [min]="0"
                           [placeholder]="i18n.services.servicePrice"
                           class="w-full"></p-inputNumber>
           </div>
         </div>
         <ng-template pTemplate="footer">
-          <button pButton [label]="i18n.common.cancel" icon="pi pi-times" 
-                  (click)="hideDialog()" class="p-button-text"></button>
-          <button pButton [label]="i18n.common.save" icon="pi pi-check" 
+          <button pButton [label]="i18n.common.cancel" 
+                  (click)="hideDialog()" 
+                  class="p-button-text"></button>
+          <button pButton [label]="i18n.common.save" 
                   (click)="saveService()"
                   [disabled]="!isValidService()"></button>
         </ng-template>
@@ -100,22 +118,48 @@ import { FR } from '../../i18n/fr';
 export class ServicesComponent implements OnInit {
   services: Service[] = [];
   displayDialog = false;
+  loading = false;
+  totalRecords = 0;
+  
   newService: Service = {
     id: 0,
     serviceName: '',
     price: 0
   };
+
   i18n = FR;
 
-  constructor(private mockDataService: MockDataService) {}
+  constructor(
+    private serviceApi: ServiceApiService,
+    private messageService: MessageService
+  ) {}
 
   ngOnInit() {
-    this.loadServices();
+    this.loadServices({ first: 0, rows: 10 });
   }
 
-  loadServices() {
-    this.mockDataService.getServices().subscribe(data => {
-      this.services = data;
+  loadServices(event: any) {
+    this.loading = true;
+    const pageRequest = {
+      page: Math.floor(event.first / event.rows),
+      size: event.rows,
+      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined
+    };
+
+    this.serviceApi.getServices(pageRequest).subscribe({
+      next: (response) => {
+        this.services = response.content;
+        this.totalRecords = response.totalElements;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load services'
+        });
+        this.loading = false;
+      }
     });
   }
 
@@ -138,16 +182,44 @@ export class ServicesComponent implements OnInit {
 
   saveService() {
     if (this.isValidService()) {
-      this.mockDataService.addService(this.newService).subscribe(() => {
-        this.loadServices();
-        this.hideDialog();
+      this.serviceApi.addService(this.newService).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Service added successfully'
+          });
+          this.loadServices({ first: 0, rows: 10 });
+          this.hideDialog();
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add service'
+          });
+        }
       });
     }
   }
 
   deleteService(id: number) {
-    this.mockDataService.deleteService(id).subscribe(() => {
-      this.loadServices();
+    this.serviceApi.deleteService(id).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Service deleted successfully'
+        });
+        this.loadServices({ first: 0, rows: 10 });
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete service'
+        });
+      }
     });
   }
 }
