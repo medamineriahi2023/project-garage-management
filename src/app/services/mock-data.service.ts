@@ -5,7 +5,6 @@ import { Maintenance } from '../models/maintenance.model';
 import { StockMovement, MovementType, MovementSource } from '../models/stock-movement.model';
 import { NotificationService } from './notification.service';
 import { Observable, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -17,32 +16,31 @@ export class MockDataService {
     { id: 3, serviceName: 'Rotation des pneus', price: 40 }
   ];
 
-  private stockItems: StockItem[] = [
-    { id: 1, name: 'Huile moteur', minQuantity: 10, unitPrice: 25, realPrice: 35, currentQuantity: 20 },
-    { id: 2, name: 'Filtre à huile', minQuantity: 5, unitPrice: 10, realPrice: 15, currentQuantity: 15 },
-    { id: 3, name: 'Plaquettes de frein', minQuantity: 4, unitPrice: 40, realPrice: 60, currentQuantity: 8 }
-  ];
-
-  private stockMovements: StockMovement[] = [
-    {
-      id: 1,
-      stockItemId: 1,
-      stockItemName: 'Huile moteur',
-      quantity: 5,
-      type: MovementType.IN,
-      source: MovementSource.PURCHASE,
-      reference: 'PO-001',
-      date: new Date(),
-      unitPrice: 25,
-      totalPrice: 125,
-      notes: 'Réapprovisionnement régulier'
-    }
-  ];
-
+  // Start with empty stock
+  private stockItems: StockItem[] = [];
+  private stockMovements: StockMovement[] = [];
   private maintenances: Maintenance[] = [];
+  private lastStockItemId = 0;
+  private lastMovementId = 0;
 
   constructor(private notificationService: NotificationService) {
-    this.checkStockLevels();
+    // Initialize with some stock items
+    this.initializeStock();
+  }
+
+  private initializeStock(): void {
+    const initialItems = [
+      { name: 'Huile moteur', minQuantity: 10, unitPrice: 25, realPrice: 35, currentQuantity: 20 },
+      { name: 'Filtre à huile', minQuantity: 5, unitPrice: 10, realPrice: 15, currentQuantity: 15 },
+      { name: 'Plaquettes de frein', minQuantity: 4, unitPrice: 40, realPrice: 60, currentQuantity: 8 }
+    ];
+
+    initialItems.forEach(item => {
+      this.addStockItem({
+        id: 0,
+        ...item
+      }).subscribe();
+    });
   }
 
   private checkStockLevels(): void {
@@ -51,6 +49,21 @@ export class MockDataService {
         this.notificationService.addNotification(item);
       }
     });
+  }
+
+  private updateStockQuantity(stockItemId: number, quantity: number, type: MovementType): void {
+    const stockItem = this.stockItems.find(item => item.id === stockItemId);
+    if (stockItem) {
+      if (type === MovementType.IN) {
+        stockItem.currentQuantity += quantity;
+      } else {
+        stockItem.currentQuantity = Math.max(0, stockItem.currentQuantity - quantity);
+      }
+      
+      if (stockItem.currentQuantity <= stockItem.minQuantity) {
+        this.notificationService.addNotification(stockItem);
+      }
+    }
   }
 
   getServices(): Observable<Service[]> {
@@ -73,11 +86,34 @@ export class MockDataService {
   }
 
   addStockItem(item: StockItem): Observable<StockItem> {
-    item.id = this.stockItems.length + 1;
+    // Generate new ID
+    this.lastStockItemId++;
+    item.id = this.lastStockItemId;
+    
+    // Add item to stock
     this.stockItems.push(item);
+    
+    // Create initial stock movement
+    const movement: StockMovement = {
+      id: ++this.lastMovementId,
+      stockItemId: item.id,
+      stockItemName: item.name,
+      quantity: item.currentQuantity,
+      type: MovementType.IN,
+      source: MovementSource.ADJUSTMENT,
+      reference: `INIT-${item.id}`,
+      date: new Date(),
+      unitPrice: item.unitPrice,
+      totalPrice: item.unitPrice * item.currentQuantity,
+      notes: `Initial stock for ${item.name}`
+    };
+    
+    this.stockMovements.push(movement);
+
     if (item.currentQuantity <= item.minQuantity) {
       this.notificationService.addNotification(item);
     }
+    
     return of(item);
   }
 
@@ -88,6 +124,24 @@ export class MockDataService {
   addMaintenance(maintenance: Maintenance): Observable<Maintenance> {
     maintenance.id = this.maintenances.length + 1;
     this.maintenances.push(maintenance);
+
+    // Create stock movements for equipment used
+    maintenance.equipmentUsed.forEach(equipment => {
+      this.addStockMovement({
+        id: 0,
+        stockItemId: equipment.id,
+        stockItemName: equipment.name,
+        quantity: 1,
+        type: MovementType.OUT,
+        source: MovementSource.MAINTENANCE,
+        reference: `MAINT-${maintenance.id}`,
+        date: new Date(),
+        unitPrice: equipment.unitPrice,
+        totalPrice: equipment.unitPrice,
+        notes: `Used in maintenance ${maintenance.id} for ${maintenance.clientName}`
+      }).subscribe();
+    });
+
     return of(maintenance);
   }
 
@@ -96,22 +150,32 @@ export class MockDataService {
   }
 
   addStockMovement(movement: StockMovement): Observable<StockMovement> {
-    movement.id = this.stockMovements.length + 1;
+    // Get the related stock item
+    const stockItem = this.stockItems.find(item => item.id === movement.stockItemId);
+    if (!stockItem) {
+      throw new Error('Stock item not found');
+    }
+
+    // Validate stock levels for OUT movements
+    if (movement.type === MovementType.OUT && 
+        stockItem.currentQuantity < movement.quantity) {
+      throw new Error('Insufficient stock quantity');
+    }
+
+    // Update movement with current stock item prices
+    movement.unitPrice = stockItem.unitPrice;
+    movement.totalPrice = movement.quantity * movement.unitPrice;
+    movement.stockItemName = stockItem.name;
+
+    // Generate new ID and set date
+    movement.id = ++this.lastMovementId;
     movement.date = new Date();
+    
+    // Add movement to history
     this.stockMovements.push(movement);
 
-    const stockItem = this.stockItems.find(item => item.id === movement.stockItemId);
-    if (stockItem) {
-      if (movement.type === MovementType.IN) {
-        stockItem.currentQuantity += movement.quantity;
-      } else {
-        stockItem.currentQuantity -= movement.quantity;
-      }
-      
-      if (stockItem.currentQuantity <= stockItem.minQuantity) {
-        this.notificationService.addNotification(stockItem);
-      }
-    }
+    // Update stock quantity
+    this.updateStockQuantity(movement.stockItemId, movement.quantity, movement.type);
 
     return of(movement);
   }

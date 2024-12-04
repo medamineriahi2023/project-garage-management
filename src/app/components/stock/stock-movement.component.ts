@@ -10,6 +10,8 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
 import { DropdownModule } from 'primeng/dropdown';
 import { CalendarModule } from 'primeng/calendar';
 import { TooltipModule } from 'primeng/tooltip';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 import { StockMovement, MovementType, MovementSource } from '../../models/stock-movement.model';
 import { StockItem } from '../../models/stock-item.model';
 import { MockDataService } from '../../services/mock-data.service';
@@ -29,9 +31,12 @@ import { FR } from '../../i18n/fr';
     InputTextareaModule,
     DropdownModule,
     CalendarModule,
-    TooltipModule
+    TooltipModule,
+    ToastModule
   ],
+  providers: [MessageService],
   template: `
+    <p-toast></p-toast>
     <div class="card">
       <div class="flex justify-content-between align-items-center mb-4">
         <h2 class="text-2xl font-semibold text-primary m-0">
@@ -73,6 +78,11 @@ import { FR } from '../../i18n/fr';
             <td>{{movement.unitPrice | currency:'TND'}}</td>
             <td>{{movement.totalPrice | currency:'TND'}}</td>
             <td>{{movement.reference}}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="8" class="text-center p-4">{{i18n.maintenance.noRecords}}</td>
           </tr>
         </ng-template>
       </p-table>
@@ -123,17 +133,6 @@ import { FR } from '../../i18n/fr';
           </div>
 
           <div class="field">
-            <label for="unitPrice" class="font-medium">{{i18n.stockMovement.unitPrice}}</label>
-            <p-inputNumber id="unitPrice"
-                          [(ngModel)]="newMovement.unitPrice"
-                          mode="currency"
-                          currency="TND"
-                          [min]="0"
-                          (onInput)="calculateTotal()"
-                          class="w-full"></p-inputNumber>
-          </div>
-
-          <div class="field">
             <label for="reference" class="font-medium">{{i18n.stockMovement.reference}}</label>
             <input pInputText id="reference"
                    [(ngModel)]="newMovement.reference"
@@ -146,6 +145,13 @@ import { FR } from '../../i18n/fr';
                       [(ngModel)]="newMovement.notes"
                       [rows]="3"
                       class="w-full"></textarea>
+          </div>
+
+          <div class="field" *ngIf="selectedStockItem">
+            <div class="flex justify-content-between">
+              <span>{{i18n.stock.currentQuantity}}: {{selectedStockItem.currentQuantity}}</span>
+              <span>{{i18n.stock.minQuantity}}: {{selectedStockItem.minQuantity}}</span>
+            </div>
           </div>
         </div>
 
@@ -165,10 +171,11 @@ export class StockMovementComponent implements OnInit {
   movements: StockMovement[] = [];
   stockItems: StockItem[] = [];
   displayDialog = false;
+  selectedStockItem: StockItem | null = null;
 
   movementTypes = [
-    { label: MovementType.IN, value: MovementType.IN },
-    { label: MovementType.OUT, value: MovementType.OUT }
+    { label: 'Entrée', value: MovementType.IN },
+    { label: 'Sortie', value: MovementType.OUT }
   ];
 
   movementSources = Object.values(MovementSource).map(source => ({
@@ -190,7 +197,10 @@ export class StockMovementComponent implements OnInit {
 
   i18n = FR;
 
-  constructor(private mockDataService: MockDataService) {}
+  constructor(
+    private mockDataService: MockDataService,
+    private messageService: MessageService
+  ) {}
 
   ngOnInit() {
     this.loadData();
@@ -202,7 +212,9 @@ export class StockMovementComponent implements OnInit {
     });
 
     this.mockDataService.getStockMovements().subscribe(movements => {
-      this.movements = movements;
+      this.movements = movements.sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
     });
   }
 
@@ -218,6 +230,7 @@ export class StockMovementComponent implements OnInit {
       unitPrice: 0,
       totalPrice: 0
     };
+    this.selectedStockItem = null;
     this.displayDialog = true;
   }
 
@@ -228,6 +241,7 @@ export class StockMovementComponent implements OnInit {
   onItemChange(event: any) {
     const selectedItem = this.stockItems.find(item => item.id === event.value);
     if (selectedItem) {
+      this.selectedStockItem = selectedItem;
       this.newMovement.stockItemName = selectedItem.name;
       this.newMovement.unitPrice = selectedItem.unitPrice;
       this.calculateTotal();
@@ -239,21 +253,50 @@ export class StockMovementComponent implements OnInit {
   }
 
   isValidMovement(): boolean {
-    return !!(
+    if (!this.selectedStockItem) return false;
+
+    const isValid = !!(
       this.newMovement.stockItemId &&
       this.newMovement.quantity > 0 &&
-      this.newMovement.unitPrice >= 0 &&
       this.newMovement.type &&
       this.newMovement.source
     );
+
+    if (this.newMovement.type === MovementType.OUT) {
+      return isValid && this.newMovement.quantity <= this.selectedStockItem.currentQuantity;
+    }
+
+    return isValid;
   }
 
   saveMovement() {
     if (this.isValidMovement()) {
-      this.mockDataService.addStockMovement(this.newMovement).subscribe(() => {
-        this.loadData();
-        this.hideDialog();
-      });
+      try {
+        this.mockDataService.addStockMovement(this.newMovement).subscribe({
+          next: () => {
+            this.loadData();
+            this.hideDialog();
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Success',
+              detail: 'Stock movement added successfully'
+            });
+          },
+          error: (error) => {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: error.message
+            });
+          }
+        });
+      } catch (error: any) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.message
+        });
+      }
     }
   }
 }
