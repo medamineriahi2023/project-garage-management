@@ -1,0 +1,106 @@
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+@import "primeng/resources/themes/lara-light-blue/theme.css";
+@import "primeng/resources/primeng.min.css";
+@import "primeicons/primeicons.css";
+@import "primeflex/primeflex.css";
+
+:root {
+  --primary-color: #3B82F6;
+  --surface-ground: #F8F9FA;
+  --surface-card: #FFFFFF;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  background-color: var(--surface-ground);
+  color: var(--text-color);
+}
+
+.layout-wrapper {
+  min-height: 100vh;
+}
+
+.layout-topbar {
+  background-color: var(--primary-color);
+  padding: 1rem;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.layout-content {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--surface-card);
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  margin-bottom: 1rem;
+}
+
+.page-title {
+  color: var(--primary-color);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.p-button {
+  border-radius: 6px;
+}
+
+.p-dialog .p-dialog-header {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.p-dialog .p-dialog-content {
+  padding: 1.5rem;
+}
+
+.form-field {
+  margin-bottom: 1rem;
+}
+
+.form-field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background-color: #22C55E;
+  color: #ffffff;
+}
+
+.badge-warning {
+  background-color: #F59E0B;
+  color: #ffffff;
+}
+
+.badge-danger {
+  background-color: #EF4444;
+  color: #ffffff;
+}
