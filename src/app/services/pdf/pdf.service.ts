@@ -15,13 +15,12 @@ export class PdfService {
 
     // Set font size for content
     doc.setFontSize(12);
-
-    // Format date properly
-    const formattedDate = new Date(maintenance.date).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Format date using simple string manipulation
+    const date = new Date(maintenance.date);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
 
     // Add maintenance details
     const details = [
@@ -45,38 +44,16 @@ export class PdfService {
     yPos += 10;
 
     maintenance.equipmentUsed.forEach(item => {
-      const price = item.realPrice.toLocaleString('fr-FR', {
-        style: 'currency',
-        currency: 'TND'
-      });
-      doc.text(`- ${item.name}: ${price}`, 30, yPos);
+      doc.text(`- ${item.name}: ${item.realPrice} TND`, 30, yPos);
       yPos += 10;
     });
 
     // Add pricing details
     yPos += 10;
     const pricing = [
-      {
-        label: 'Sous-total',
-        value: maintenance.totalPrice.toLocaleString('fr-FR', {
-          style: 'currency',
-          currency: 'TND'
-        })
-      },
-      {
-        label: 'Remise',
-        value: maintenance.discount.toLocaleString('fr-FR', {
-          style: 'currency',
-          currency: 'TND'
-        })
-      },
-      {
-        label: 'Prix final',
-        value: maintenance.finalPrice.toLocaleString('fr-FR', {
-          style: 'currency',
-          currency: 'TND'
-        })
-      }
+      { label: 'Sous-total', value: `${maintenance.totalPrice} TND` },
+      { label: 'Remise', value: `${maintenance.discount} TND` },
+      { label: 'Prix final', value: `${maintenance.finalPrice} TND` }
     ];
 
     pricing.forEach(price => {
@@ -92,7 +69,9 @@ export class PdfService {
       doc.text(maintenance.description, 30, yPos);
     }
 
+
     // Save the PDF
     doc.save(`maintenance-${maintenance.id}.pdf`);
+
   }
 }

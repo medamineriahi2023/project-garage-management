@@ -14,13 +14,13 @@ import { MessageService } from 'primeng/api';
 import { MaintenanceFiltersComponent } from './maintenance-filters.component';
 import { MaintenanceListComponent } from './maintenance-list.component';
 import { LoadingComponent } from '../shared/loading/loading.component';
-import { Service } from '../../models';
-import { StockItem } from '../../models';
-import { Maintenance } from '../../models';
+import { Service } from '../../models/service.model';
+import { StockItem } from '../../models/stock-item.model';
+import { Maintenance } from '../../models/maintenance.model';
 import { MaintenanceService } from '../../services/api/maintenance.service';
 import { ServiceApiService } from '../../services/api/service.service';
 import { StockItemService } from '../../services/api/stock-item.service';
-import { PdfService } from '../../services';
+import { PdfService } from '../../services/pdf.service';
 import { FR } from '../../i18n/fr';
 import { Subscription } from 'rxjs';
 
@@ -126,11 +126,11 @@ import { Subscription } from 'rxjs';
           <div class="flex justify-content-between">
             <div class="field">
               <label class="font-medium">{{i18n.maintenance.subtotal}}</label>
-              <div class="text-xl">{{newMaintenance.totalPrice | currency:'TND'}}</div>
+              <div class="text-xl">{{newMaintenance.totalPrice}} TND</div>
             </div>
             <div class="field">
               <label class="font-medium">{{i18n.maintenance.finalPrice}}</label>
-              <div class="text-xl font-bold">{{newMaintenance.finalPrice | currency:'TND'}}</div>
+              <div class="text-xl font-bold">{{newMaintenance.finalPrice}} TND</div>
             </div>
           </div>
         </div>
