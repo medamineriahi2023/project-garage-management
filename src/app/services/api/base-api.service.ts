@@ -12,7 +12,7 @@ export class BaseApiService {
 
   constructor(protected http: HttpClient) {}
 
-  protected getWithPagination<T>(endpoint: string, pageRequest: PageRequest): Observable<PageResponse<T>> {
+  protected buildBaseParams(pageRequest: PageRequest): HttpParams {
     let params = new HttpParams()
       .set('page', pageRequest.page.toString())
       .set('size', pageRequest.size.toString());
@@ -23,6 +23,11 @@ export class BaseApiService {
       });
     }
 
+    return params;
+  }
+
+  protected getWithPagination<T>(endpoint: string, pageRequest: PageRequest): Observable<PageResponse<T>> {
+    const params = this.buildBaseParams(pageRequest);
     return this.http.get<PageResponse<T>>(`${this.baseUrl}${endpoint}`, { params });
   }
 

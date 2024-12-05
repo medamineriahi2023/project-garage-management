@@ -1,17 +1,45 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { HttpParams } from '@angular/common/http';
+import { Observable, Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { BaseApiService } from './base-api.service';
 import { Maintenance } from '../../models/maintenance.model';
 import { PageRequest, PageResponse } from '../../models/pagination.model';
+
+export interface MaintenanceSearchCriteria extends PageRequest {
+  search?: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class MaintenanceService extends BaseApiService {
   private endpoint = '/maintenances';
+  private searchTerms = new Subject<string>();
 
-  getMaintenances(pageRequest: PageRequest): Observable<PageResponse<Maintenance>> {
-    return this.getWithPagination<Maintenance>(this.endpoint, pageRequest);
+  search(term: string) {
+    this.searchTerms.next(term);
+  }
+
+  getSearchResults(): Observable<PageResponse<Maintenance>> {
+    return this.searchTerms.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((term: string) => this.getMaintenances({ 
+        page: 0, 
+        size: 10, 
+        search: term 
+      }))
+    );
+  }
+
+  getMaintenances(criteria: MaintenanceSearchCriteria): Observable<PageResponse<Maintenance>> {
+    let params = this.buildBaseParams(criteria);
+    
+    if (criteria.search) {
+      params = params.set('search', criteria.search);
+    }
+
+    return this.http.get<PageResponse<Maintenance>>(`${this.baseUrl}${this.endpoint}`, { params });
   }
 
   addMaintenance(maintenance: Maintenance): Observable<Maintenance> {

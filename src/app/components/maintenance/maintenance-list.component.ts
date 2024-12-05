@@ -3,21 +3,29 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { LoadingComponent } from '../shared/loading/loading.component';
 import { Maintenance } from '../../models/maintenance.model';
 import { FR } from '../../i18n/fr';
 
 @Component({
   selector: 'app-maintenance-list',
   standalone: true,
-  imports: [CommonModule, TableModule, ButtonModule, TooltipModule],
+  imports: [CommonModule, TableModule, ButtonModule, TooltipModule, LoadingComponent],
   template: `
     <p-table 
       [value]="maintenances" 
       [tableStyle]="{ 'min-width': '60rem' }"
+      [lazy]="true"
+      [loading]="loading"
+      (onLazyLoad)="loadData.emit($event)"
       [paginator]="true" 
-      [rows]="5" 
+      [rows]="10"
+      [totalRecords]="totalRecords"
       [showCurrentPageReport]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+      [rowsPerPageOptions]="[5,10,25,50]"
       styleClass="p-datatable-gridlines">
+      
       <ng-template pTemplate="header">
         <tr>
           <th>{{i18n.common.id}}</th>
@@ -31,6 +39,7 @@ import { FR } from '../../i18n/fr';
           <th>{{i18n.common.actions}}</th>
         </tr>
       </ng-template>
+      
       <ng-template pTemplate="body" let-maintenance>
         <tr>
           <td>{{maintenance.id}}</td>
@@ -52,6 +61,7 @@ import { FR } from '../../i18n/fr';
           </td>
         </tr>
       </ng-template>
+      
       <ng-template pTemplate="emptymessage">
         <tr>
           <td colspan="9" class="text-center p-4">{{i18n.maintenance.noRecords}}</td>
@@ -62,7 +72,10 @@ import { FR } from '../../i18n/fr';
 })
 export class MaintenanceListComponent {
   @Input() maintenances: Maintenance[] = [];
+  @Input() loading = false;
+  @Input() totalRecords = 0;
   @Output() generatePdf = new EventEmitter<Maintenance>();
+  @Output() loadData = new EventEmitter<any>();
   
   i18n = FR;
 }

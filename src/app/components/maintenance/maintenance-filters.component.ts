@@ -17,7 +17,7 @@ import { FR } from '../../i18n/fr';
           pInputText 
           [placeholder]="i18n.maintenance.searchPlaceholder"
           [(ngModel)]="searchTerm"
-          (ngModelChange)="onSearch($event)"
+          (input)="onSearch($event)"
           class="w-full"
         />
       </div>
@@ -30,7 +30,8 @@ export class MaintenanceFiltersComponent {
   searchTerm: string = '';
   i18n = FR;
 
-  onSearch(term: string) {
-    this.search.emit(term);
+  onSearch(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.search.emit(target.value);
   }
 }

@@ -2,10 +2,10 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-    selector: 'app-loading',
-    standalone: true,
-    imports: [CommonModule],
-    template: `
+  selector: 'app-loading',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
     <div class="loading-container">
       <div class="loading-spinner">
         <div class="spinner"></div>
@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
       <p class="loading-text">Chargement en cours...</p>
     </div>
   `,
-    styles: [`
+  styles: [`
     .loading-container {
       display: flex;
       flex-direction: column;

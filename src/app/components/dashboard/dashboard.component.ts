@@ -6,7 +6,8 @@ import { ChartModule } from 'primeng/chart';
 import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { DashboardApiService } from '../../services/api/dashboard.service';
+import { DashboardService } from '../../services/dashboard/dashboard.service';
+import { LoadingComponent } from '../shared/loading/loading.component';
 import { FR } from '../../i18n/fr';
 
 @Component({
@@ -18,7 +19,8 @@ import { FR } from '../../i18n/fr';
     CardModule,
     ChartModule,
     FormsModule,
-    ToastModule
+    ToastModule,
+    LoadingComponent
   ],
   providers: [MessageService],
   template: `
@@ -36,7 +38,9 @@ import { FR } from '../../i18n/fr';
         </p-dropdown>
       </div>
 
-      <div class="grid">
+      <app-loading *ngIf="loading"></app-loading>
+
+      <div class="grid" *ngIf="!loading">
         <!-- Summary Cards -->
         <div class="col-12 md:col-6 lg:col-3">
           <p-card styleClass="h-full">
@@ -134,6 +138,7 @@ import { FR } from '../../i18n/fr';
 export class DashboardComponent implements OnInit {
   i18n = FR;
   selectedPeriod = 'month';
+  loading = true;
   periodOptions = [
     { label: 'Jour', value: 'day' },
     { label: 'Semaine', value: 'week' },
@@ -178,7 +183,7 @@ export class DashboardComponent implements OnInit {
   };
 
   constructor(
-    private dashboardService: DashboardApiService,
+    private dashboardService: DashboardService,
     private messageService: MessageService
   ) {}
 
@@ -191,6 +196,7 @@ export class DashboardComponent implements OnInit {
   }
 
   loadDashboardData() {
+    this.loading = true;
     this.dashboardService.getDashboardData(this.selectedPeriod).subscribe({
       next: (data) => {
         this.summary = data.summary;
@@ -198,6 +204,7 @@ export class DashboardComponent implements OnInit {
         this.profitData = data.profitChart;
         this.servicesData = data.servicesChart;
         this.stockData = data.stockChart;
+        this.loading = false;
       },
       error: (error) => {
         this.messageService.add({
@@ -205,6 +212,7 @@ export class DashboardComponent implements OnInit {
           summary: 'Error',
           detail: 'Failed to load dashboard data'
         });
+        this.loading = false;
       }
     });
   }

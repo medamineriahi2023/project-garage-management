@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -13,6 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { MaintenanceFiltersComponent } from './maintenance-filters.component';
 import { MaintenanceListComponent } from './maintenance-list.component';
+import { LoadingComponent } from '../shared/loading/loading.component';
 import { Service } from '../../models/service.model';
 import { StockItem } from '../../models/stock-item.model';
 import { Maintenance } from '../../models/maintenance.model';
@@ -21,6 +22,7 @@ import { ServiceApiService } from '../../services/api/service.service';
 import { StockItemService } from '../../services/api/stock-item.service';
 import { PdfService } from '../../services/pdf.service';
 import { FR } from '../../i18n/fr';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-maintenance',
@@ -38,7 +40,8 @@ import { FR } from '../../i18n/fr';
     TooltipModule,
     ToastModule,
     MaintenanceFiltersComponent,
-    MaintenanceListComponent
+    MaintenanceListComponent,
+    LoadingComponent
   ],
   providers: [MessageService],
   template: `
@@ -54,8 +57,14 @@ import { FR } from '../../i18n/fr';
       </div>
 
       <app-maintenance-filters (search)="onSearch($event)"></app-maintenance-filters>
-      <app-maintenance-list [maintenances]="filteredMaintenances" 
-                          (generatePdf)="onGeneratePdf($event)"></app-maintenance-list>
+      
+      <app-maintenance-list 
+        [maintenances]="maintenances"
+        [loading]="loading"
+        [totalRecords]="totalRecords"
+        (generatePdf)="onGeneratePdf($event)"
+        (loadData)="loadMaintenances($event)">
+      </app-maintenance-list>
 
       <p-dialog [header]="i18n.maintenance.addMaintenance" 
                 [(visible)]="displayDialog"
@@ -86,7 +95,6 @@ import { FR } from '../../i18n/fr';
                        [(ngModel)]="newMaintenance.serviceId"
                        optionLabel="serviceName"
                        optionValue="id"
-                       (onChange)="onServiceChange($event)"
                        [placeholder]="i18n.maintenance.service"
                        class="w-full"></p-dropdown>
           </div>
@@ -97,7 +105,6 @@ import { FR } from '../../i18n/fr';
                           [options]="stockItems"
                           [(ngModel)]="selectedEquipment"
                           optionLabel="name"
-                          (onChange)="calculateTotal()"
                           [placeholder]="i18n.maintenance.equipmentUsed"
                           class="w-full"></p-multiSelect>
           </div>
@@ -106,7 +113,6 @@ import { FR } from '../../i18n/fr';
             <label for="discount" class="font-medium">{{i18n.maintenance.discount}}</label>
             <p-inputNumber id="discount"
                           [(ngModel)]="newMaintenance.discount"
-                          (onInput)="calculateTotal()"
                           mode="currency"
                           currency="TND"
                           [min]="0"
@@ -139,15 +145,15 @@ import { FR } from '../../i18n/fr';
     </div>
   `
 })
-export class MaintenanceComponent implements OnInit {
+export class MaintenanceComponent implements OnInit, OnDestroy {
   services: Service[] = [];
   stockItems: StockItem[] = [];
   maintenances: Maintenance[] = [];
-  filteredMaintenances: Maintenance[] = [];
   displayDialog = false;
   selectedEquipment: StockItem[] = [];
   loading = false;
   totalRecords = 0;
+  private searchSubscription?: Subscription;
   
   newMaintenance: Maintenance = this.getEmptyMaintenance();
   i18n = FR;
@@ -161,10 +167,42 @@ export class MaintenanceComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.loadData();
+    this.loadInitialData();
+    this.setupSearch();
   }
 
-  loadData() {
+  ngOnDestroy() {
+    if (this.searchSubscription) {
+      this.searchSubscription.unsubscribe();
+    }
+  }
+
+  private setupSearch() {
+    this.searchSubscription = this.maintenanceService.getSearchResults()
+      .subscribe({
+        next: (response) => {
+          this.maintenances = response.content;
+          this.totalRecords = response.totalElements;
+          this.loading = false;
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to search maintenances'
+          });
+          this.loading = false;
+        }
+      });
+  }
+
+  private loadInitialData() {
+    this.loadServices();
+    this.loadStockItems();
+    this.loadMaintenances({ first: 0, rows: 10 });
+  }
+
+  private loadServices() {
     this.serviceApi.getServices({ page: 0, size: 1000 }).subscribe({
       next: (response) => {
         this.services = response.content;
@@ -177,7 +215,9 @@ export class MaintenanceComponent implements OnInit {
         });
       }
     });
+  }
 
+  private loadStockItems() {
     this.stockItemService.getStockItems({ page: 0, size: 1000 }).subscribe({
       next: (response) => {
         this.stockItems = response.content;
@@ -190,8 +230,6 @@ export class MaintenanceComponent implements OnInit {
         });
       }
     });
-
-    this.loadMaintenances({ first: 0, rows: 10 });
   }
 
   loadMaintenances(event: any) {
@@ -205,7 +243,6 @@ export class MaintenanceComponent implements OnInit {
     this.maintenanceService.getMaintenances(pageRequest).subscribe({
       next: (response) => {
         this.maintenances = response.content;
-        this.filteredMaintenances = response.content;
         this.totalRecords = response.totalElements;
         this.loading = false;
       },
@@ -218,6 +255,11 @@ export class MaintenanceComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  onSearch(term: string) {
+    this.loading = true;
+    this.maintenanceService.search(term);
   }
 
   getEmptyMaintenance(): Maintenance {
@@ -248,44 +290,21 @@ export class MaintenanceComponent implements OnInit {
     this.displayDialog = false;
   }
 
-  onServiceChange(event: any) {
-    const selectedService = this.services.find(s => s.id === event.value);
-    if (selectedService) {
-      this.newMaintenance.serviceName = selectedService.serviceName;
-      this.calculateTotal();
-    }
-  }
-
-  calculateTotal() {
-    const selectedService = this.services.find(s => s.id === this.newMaintenance.serviceId);
-    const servicePrice = selectedService ? selectedService.price : 0;
-    
-    const equipmentTotal = this.selectedEquipment.reduce(
-      (total, item) => total + item.realPrice,
-      0
-    );
-    
-    this.newMaintenance.equipmentUsed = [...this.selectedEquipment];
-    this.newMaintenance.totalPrice = servicePrice + equipmentTotal;
-    
-    if (this.newMaintenance.discount > this.newMaintenance.totalPrice) {
-      this.newMaintenance.discount = this.newMaintenance.totalPrice;
-    }
-    
-    this.newMaintenance.finalPrice = this.newMaintenance.totalPrice - this.newMaintenance.discount;
+  onGeneratePdf(maintenance: Maintenance) {
+    this.pdfService.generateMaintenancePdf(maintenance);
   }
 
   isValidMaintenance(): boolean {
     return !!(
       this.newMaintenance.clientName &&
       this.newMaintenance.carRegistrationNumber &&
-      this.newMaintenance.serviceId &&
-      this.newMaintenance.totalPrice > 0
+      this.newMaintenance.serviceId
     );
   }
 
   saveMaintenance() {
     if (this.isValidMaintenance()) {
+      this.newMaintenance.equipmentUsed = [...this.selectedEquipment];
       this.maintenanceService.addMaintenance(this.newMaintenance).subscribe({
         next: () => {
           this.messageService.add({
@@ -305,22 +324,5 @@ export class MaintenanceComponent implements OnInit {
         }
       });
     }
-  }
-
-  onSearch(term: string) {
-    if (!term) {
-      this.filteredMaintenances = this.maintenances;
-    } else {
-      const searchTerm = term.toLowerCase();
-      this.filteredMaintenances = this.maintenances.filter(maintenance =>
-        maintenance.clientName.toLowerCase().includes(searchTerm) ||
-        maintenance.carRegistrationNumber.toLowerCase().includes(searchTerm) ||
-        maintenance.id.toString().includes(searchTerm)
-      );
-    }
-  }
-
-  onGeneratePdf(maintenance: Maintenance) {
-    this.pdfService.generateMaintenancePdf(maintenance);
   }
 }
