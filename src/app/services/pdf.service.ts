@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
-import { Maintenance } from '../models/maintenance.model';
+import {Maintenance} from "../models";
 
 @Injectable({
   providedIn: 'root'
@@ -8,34 +8,70 @@ import { Maintenance } from '../models/maintenance.model';
 export class PdfService {
   generateMaintenancePdf(maintenance: Maintenance): void {
     const doc = new jsPDF();
-    
+
+    // Set font size for title
     doc.setFontSize(20);
     doc.text('Rapport de Maintenance', 20, 20);
-    
+
+    // Set font size for content
     doc.setFontSize(12);
-    doc.text(`ID: ${maintenance.id}`, 20, 40);
-    doc.text(`Client: ${maintenance.clientName}`, 20, 50);
-    doc.text(`Service: ${maintenance.serviceName}`, 20, 60);
-    doc.text(`Immatriculation: ${maintenance.carRegistrationNumber}`, 20, 70);
-    doc.text(`Date: ${maintenance.date.toLocaleDateString('fr-FR')}`, 20, 80);
-    doc.text(`Assigné à: ${maintenance.assignedToUserName}`, 20, 90);
-    
-    doc.text('Équipement utilisé:', 20, 110);
-    let yPos = 120;
-    maintenance.equipmentUsed.forEach(item => {
-      doc.text(`- ${item.name}: ${item.realPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'TND' })}`, 30, yPos);
+    // Format date using simple string manipulation
+    const date = new Date(maintenance.date);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+
+    // Add maintenance details
+    const details = [
+      { label: 'ID', value: maintenance.id.toString() },
+      { label: 'Client', value: maintenance.clientName },
+      { label: 'Service', value: maintenance.serviceName },
+      { label: 'Immatriculation', value: maintenance.carRegistrationNumber },
+      { label: 'Date', value: formattedDate },
+      { label: 'Assigné à', value: maintenance.assignedToUserName }
+    ];
+
+    let yPos = 40;
+    details.forEach(detail => {
+      doc.text(`${detail.label}: ${detail.value}`, 20, yPos);
       yPos += 10;
     });
-    
-    doc.text(`Sous-total: ${maintenance.totalPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'TND' })}`, 20, yPos + 20);
-    doc.text(`Remise: ${maintenance.discount.toLocaleString('fr-FR', { style: 'currency', currency: 'TND' })}`, 20, yPos + 30);
-    doc.text(`Prix final: ${maintenance.finalPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'TND' })}`, 20, yPos + 40);
-    
+
+    // Add equipment section
+    yPos += 10;
+    doc.text('Équipement utilisé:', 20, yPos);
+    yPos += 10;
+
+    maintenance.equipmentUsed.forEach(item => {
+      doc.text(`- ${item.name}: ${item.realPrice} TND`, 30, yPos);
+      yPos += 10;
+    });
+
+    // Add pricing details
+    yPos += 10;
+    const pricing = [
+      { label: 'Sous-total', value: `${maintenance.totalPrice} TND` },
+      { label: 'Remise', value: `${maintenance.discount} TND` },
+      { label: 'Prix final', value: `${maintenance.finalPrice} TND` }
+    ];
+
+    pricing.forEach(price => {
+      doc.text(`${price.label}: ${price.value}`, 20, yPos);
+      yPos += 10;
+    });
+
+    // Add description if available
     if (maintenance.description) {
-      doc.text('Description:', 20, yPos + 60);
-      doc.text(maintenance.description, 30, yPos + 70);
+      yPos += 10;
+      doc.text('Description:', 20, yPos);
+      yPos += 10;
+      doc.text(maintenance.description, 30, yPos);
     }
-    
+
+
+    // Save the P1DF
     doc.save(`maintenance-${maintenance.id}.pdf`);
+
   }
 }
