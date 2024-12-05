@@ -8,8 +8,10 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { StockItem } from '../../models/stock-item.model';
-import { MockDataService } from '../../services/mock-data.service';
+import { StockItemService } from '../../services/api/stock-item.service';
 import { FR } from '../../i18n/fr';
 
 @Component({
@@ -24,9 +26,12 @@ import { FR } from '../../i18n/fr';
     InputNumberModule,
     DialogModule,
     TooltipModule,
-    TagModule
+    TagModule,
+    ToastModule
   ],
+  providers: [MessageService],
   template: `
+    <p-toast></p-toast>
     <div class="card">
       <div class="flex justify-content-between align-items-center mb-4">
         <h2 class="text-2xl font-semibold text-primary m-0">
@@ -48,9 +53,9 @@ import { FR } from '../../i18n/fr';
         (onLazyLoad)="loadStockItems($event)"
         [showCurrentPageReport]="true"
         [rowsPerPageOptions]="[5,10,25,50]"
-        currentPageReportTemplate="Affichage {first} à {last} sur {totalRecords} articles"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
         [globalFilterFields]="['name']"
-        styleClass="p-datatable-gridlines p-datatable-striped">
+        styleClass="p-datatable-gridlines">
         
         <ng-template pTemplate="caption">
           <div class="flex justify-content-between align-items-center">
@@ -141,7 +146,7 @@ import { FR } from '../../i18n/fr';
             <p-inputNumber id="unitPrice" 
                           [(ngModel)]="newItem.unitPrice"
                           mode="currency" 
-                          currency="EUR"
+                          currency="TND"
                           [min]="0"
                           [placeholder]="i18n.stock.unitPrice"
                           class="w-full"></p-inputNumber>
@@ -152,7 +157,7 @@ import { FR } from '../../i18n/fr';
             <p-inputNumber id="realPrice" 
                           [(ngModel)]="newItem.realPrice"
                           mode="currency" 
-                          currency="EUR"
+                          currency="TND"
                           [min]="0"
                           [placeholder]="i18n.stock.realPrice"
                           class="w-full"></p-inputNumber>
@@ -190,7 +195,10 @@ export class StockComponent implements OnInit {
 
   i18n = FR;
 
-  constructor(private mockDataService: MockDataService) {}
+  constructor(
+    private stockItemService: StockItemService,
+    private messageService: MessageService
+  ) {}
 
   ngOnInit() {
     this.loadStockItems({ first: 0, rows: 10 });
@@ -203,15 +211,26 @@ export class StockComponent implements OnInit {
 
   loadStockItems(event: any) {
     this.loading = true;
+    const pageRequest = {
+      page: Math.floor(event.first / event.rows),
+      size: event.rows,
+      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined
+    };
     
-    // Simulate server-side pagination
-    this.mockDataService.getStockItems().subscribe(data => {
-      const start = event.first;
-      const end = start + event.rows;
-      
-      this.stockItems = data.slice(start, end);
-      this.totalRecords = data.length;
-      this.loading = false;
+    this.stockItemService.getStockItems(pageRequest).subscribe({
+      next: (response) => {
+        this.stockItems = response.content;
+        this.totalRecords = response.totalElements;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load stock items'
+        });
+        this.loading = false;
+      }
     });
   }
 
@@ -243,9 +262,23 @@ export class StockComponent implements OnInit {
 
   saveItem() {
     if (this.isValidItem()) {
-      this.mockDataService.addStockItem(this.newItem).subscribe(() => {
-        this.loadStockItems({ first: 0, rows: 10 });
-        this.hideDialog();
+      this.stockItemService.addStockItem(this.newItem).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Stock item added successfully'
+          });
+          this.loadStockItems({ first: 0, rows: 10 });
+          this.hideDialog();
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add stock item'
+          });
+        }
       });
     }
   }

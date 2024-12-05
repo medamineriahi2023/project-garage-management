@@ -9,13 +9,16 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { TooltipModule } from 'primeng/tooltip';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { MaintenanceFiltersComponent } from './maintenance-filters.component';
 import { MaintenanceListComponent } from './maintenance-list.component';
 import { Service } from '../../models/service.model';
 import { StockItem } from '../../models/stock-item.model';
 import { Maintenance } from '../../models/maintenance.model';
-import { MovementType, MovementSource } from '../../models/stock-movement.model';
-import { MockDataService } from '../../services/mock-data.service';
+import { MaintenanceService } from '../../services/api/maintenance.service';
+import { ServiceApiService } from '../../services/api/service.service';
+import { StockItemService } from '../../services/api/stock-item.service';
 import { PdfService } from '../../services/pdf.service';
 import { FR } from '../../i18n/fr';
 
@@ -33,10 +36,13 @@ import { FR } from '../../i18n/fr';
     DropdownModule,
     MultiSelectModule,
     TooltipModule,
+    ToastModule,
     MaintenanceFiltersComponent,
     MaintenanceListComponent
   ],
+  providers: [MessageService],
   template: `
+    <p-toast></p-toast>
     <div class="card">
       <div class="flex justify-content-between align-items-center mb-4">
         <h2 class="text-2xl font-semibold text-primary m-0">
@@ -102,7 +108,7 @@ import { FR } from '../../i18n/fr';
                           [(ngModel)]="newMaintenance.discount"
                           (onInput)="calculateTotal()"
                           mode="currency"
-                          currency="EUR"
+                          currency="TND"
                           [min]="0"
                           [max]="newMaintenance.totalPrice"
                           class="w-full">
@@ -140,13 +146,18 @@ export class MaintenanceComponent implements OnInit {
   filteredMaintenances: Maintenance[] = [];
   displayDialog = false;
   selectedEquipment: StockItem[] = [];
+  loading = false;
+  totalRecords = 0;
   
   newMaintenance: Maintenance = this.getEmptyMaintenance();
   i18n = FR;
 
   constructor(
-    private mockDataService: MockDataService,
-    private pdfService: PdfService
+    private maintenanceService: MaintenanceService,
+    private serviceApi: ServiceApiService,
+    private stockItemService: StockItemService,
+    private pdfService: PdfService,
+    private messageService: MessageService
   ) {}
 
   ngOnInit() {
@@ -154,17 +165,58 @@ export class MaintenanceComponent implements OnInit {
   }
 
   loadData() {
-    this.mockDataService.getServices().subscribe(services => {
-      this.services = services;
+    this.serviceApi.getServices({ page: 0, size: 1000 }).subscribe({
+      next: (response) => {
+        this.services = response.content;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load services'
+        });
+      }
     });
 
-    this.mockDataService.getStockItems().subscribe(items => {
-      this.stockItems = items;
+    this.stockItemService.getStockItems({ page: 0, size: 1000 }).subscribe({
+      next: (response) => {
+        this.stockItems = response.content;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load stock items'
+        });
+      }
     });
 
-    this.mockDataService.getMaintenances().subscribe(maintenances => {
-      this.maintenances = maintenances;
-      this.filteredMaintenances = maintenances;
+    this.loadMaintenances({ first: 0, rows: 10 });
+  }
+
+  loadMaintenances(event: any) {
+    this.loading = true;
+    const pageRequest = {
+      page: Math.floor(event.first / event.rows),
+      size: event.rows,
+      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined
+    };
+
+    this.maintenanceService.getMaintenances(pageRequest).subscribe({
+      next: (response) => {
+        this.maintenances = response.content;
+        this.filteredMaintenances = response.content;
+        this.totalRecords = response.totalElements;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load maintenances'
+        });
+        this.loading = false;
+      }
     });
   }
 
@@ -232,33 +284,25 @@ export class MaintenanceComponent implements OnInit {
     );
   }
 
-  createStockMovements() {
-    // Create stock movements for each equipment used
-    this.selectedEquipment.forEach(equipment => {
-      const movement = {
-        id: 0,
-        stockItemId: equipment.id,
-        stockItemName: equipment.name,
-        quantity: 1, // Assuming 1 unit per equipment
-        type: MovementType.OUT,
-        source: MovementSource.MAINTENANCE,
-        reference: `MAINT-${this.newMaintenance.id}`,
-        date: new Date(),
-        unitPrice: equipment.realPrice,
-        totalPrice: equipment.realPrice,
-        notes: `Utilisé pour la maintenance ${this.newMaintenance.id} - Client: ${this.newMaintenance.clientName}`
-      };
-
-      this.mockDataService.addStockMovement(movement).subscribe();
-    });
-  }
-
   saveMaintenance() {
     if (this.isValidMaintenance()) {
-      this.mockDataService.addMaintenance(this.newMaintenance).subscribe(maintenance => {
-        this.createStockMovements();
-        this.loadData();
-        this.hideDialog();
+      this.maintenanceService.addMaintenance(this.newMaintenance).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Maintenance added successfully'
+          });
+          this.loadMaintenances({ first: 0, rows: 10 });
+          this.hideDialog();
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add maintenance'
+          });
+        }
       });
     }
   }

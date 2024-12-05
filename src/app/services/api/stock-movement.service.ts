@@ -15,6 +15,23 @@ export class StockMovementService extends BaseApiService {
   }
 
   addStockMovement(movement: StockMovement): Observable<StockMovement> {
-    return this.post<StockMovement>(this.endpoint, movement);
+    // Ensure date is properly formatted
+    const formattedMovement = {
+      ...movement,
+      date: new Date(movement.date).toISOString()
+    };
+    return this.post<StockMovement>(this.endpoint, formattedMovement);
+  }
+
+  updateStockMovement(id: number, movement: StockMovement): Observable<StockMovement> {
+    const formattedMovement = {
+      ...movement,
+      date: new Date(movement.date).toISOString()
+    };
+    return this.put<StockMovement>(`${this.endpoint}/${id}`, formattedMovement);
+  }
+
+  deleteStockMovement(id: number): Observable<void> {
+    return this.delete(`${this.endpoint}/${id}`);
   }
 }

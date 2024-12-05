@@ -4,7 +4,9 @@ import { DropdownModule } from 'primeng/dropdown';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { FormsModule } from '@angular/forms';
-import { DashboardService } from '../../services/dashboard.service';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { DashboardApiService } from '../../services/api/dashboard.service';
 import { FR } from '../../i18n/fr';
 
 @Component({
@@ -15,9 +17,12 @@ import { FR } from '../../i18n/fr';
     DropdownModule,
     CardModule,
     ChartModule,
-    FormsModule
+    FormsModule,
+    ToastModule
   ],
+  providers: [MessageService],
   template: `
+    <p-toast></p-toast>
     <div class="card">
       <div class="flex justify-content-between align-items-center mb-4">
         <h2 class="text-2xl font-semibold text-primary m-0">
@@ -172,7 +177,10 @@ export class DashboardComponent implements OnInit {
     maintainAspectRatio: false
   };
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardApiService,
+    private messageService: MessageService
+  ) {}
 
   ngOnInit() {
     this.loadDashboardData();
@@ -183,12 +191,21 @@ export class DashboardComponent implements OnInit {
   }
 
   loadDashboardData() {
-    this.dashboardService.getDashboardData(this.selectedPeriod).subscribe(data => {
-      this.summary = data.summary;
-      this.revenueExpensesData = data.revenueExpensesChart;
-      this.profitData = data.profitChart;
-      this.servicesData = data.servicesChart;
-      this.stockData = data.stockChart;
+    this.dashboardService.getDashboardData(this.selectedPeriod).subscribe({
+      next: (data) => {
+        this.summary = data.summary;
+        this.revenueExpensesData = data.revenueExpensesChart;
+        this.profitData = data.profitChart;
+        this.servicesData = data.servicesChart;
+        this.stockData = data.stockChart;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load dashboard data'
+        });
+      }
     });
   }
 

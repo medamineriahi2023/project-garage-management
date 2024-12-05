@@ -14,7 +14,8 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { StockMovement, MovementType, MovementSource } from '../../models/stock-movement.model';
 import { StockItem } from '../../models/stock-item.model';
-import { MockDataService } from '../../services/mock-data.service';
+import { StockMovementService } from '../../services/api/stock-movement.service';
+import { StockItemService } from '../../services/api/stock-item.service';
 import { FR } from '../../i18n/fr';
 
 @Component({
@@ -42,25 +43,31 @@ import { FR } from '../../i18n/fr';
         <h2 class="text-2xl font-semibold text-primary m-0">
           <i class="pi pi-history mr-2"></i>{{i18n.stockMovement.title}}
         </h2>
-        <button pButton [label]="i18n.stockMovement.addMovement" 
-                icon="pi pi-plus" 
+        <button pButton [label]="i18n.stockMovement.addMovement"
+                icon="pi pi-plus"
                 (click)="showDialog()"></button>
       </div>
 
-      <p-table [value]="movements" 
-               [paginator]="true" 
+      <p-table [value]="movements"
+               [lazy]="true"
+               (onLazyLoad)="loadMovements($event)"
+               [paginator]="true"
                [rows]="10"
+               [totalRecords]="totalRecords"
+               [loading]="loading"
                [showCurrentPageReport]="true"
+               currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+               [rowsPerPageOptions]="[5,10,25,50]"
                styleClass="p-datatable-gridlines">
         <ng-template pTemplate="header">
           <tr>
-            <th>{{i18n.common.date}}</th>
-            <th>{{i18n.stockMovement.item}}</th>
-            <th>{{i18n.stockMovement.type}}</th>
-            <th>{{i18n.stockMovement.source}}</th>
-            <th>{{i18n.stockMovement.quantity}}</th>
-            <th>{{i18n.stockMovement.unitPrice}}</th>
-            <th>{{i18n.stockMovement.totalPrice}}</th>
+            <th pSortableColumn="date">{{i18n.common.date}} <p-sortIcon field="date"></p-sortIcon></th>
+            <th pSortableColumn="stockItemName">{{i18n.stockMovement.item}} <p-sortIcon field="stockItemName"></p-sortIcon></th>
+            <th pSortableColumn="type">{{i18n.stockMovement.type}} <p-sortIcon field="type"></p-sortIcon></th>
+            <th pSortableColumn="source">{{i18n.stockMovement.source}} <p-sortIcon field="source"></p-sortIcon></th>
+            <th pSortableColumn="quantity">{{i18n.stockMovement.quantity}} <p-sortIcon field="quantity"></p-sortIcon></th>
+            <th pSortableColumn="unitPrice">{{i18n.stockMovement.unitPrice}} <p-sortIcon field="unitPrice"></p-sortIcon></th>
+            <th pSortableColumn="totalPrice">{{i18n.stockMovement.totalPrice}} <p-sortIcon field="totalPrice"></p-sortIcon></th>
             <th>{{i18n.stockMovement.reference}}</th>
           </tr>
         </ng-template>
@@ -96,40 +103,40 @@ import { FR } from '../../i18n/fr';
           <div class="field">
             <label for="item" class="font-medium">{{i18n.stockMovement.item}}</label>
             <p-dropdown id="item"
-                       [options]="stockItems"
-                       [(ngModel)]="newMovement.stockItemId"
-                       optionLabel="name"
-                       optionValue="id"
-                       (onChange)="onItemChange($event)"
-                       [placeholder]="i18n.stockMovement.selectItem"
-                       class="w-full"></p-dropdown>
+                        [options]="stockItems"
+                        [(ngModel)]="newMovement.stockItemId"
+                        optionLabel="name"
+                        optionValue="id"
+                        (onChange)="onItemChange($event)"
+                        [placeholder]="i18n.stockMovement.selectItem"
+                        class="w-full"></p-dropdown>
           </div>
 
           <div class="field">
             <label for="type" class="font-medium">{{i18n.stockMovement.type}}</label>
             <p-dropdown id="type"
-                       [options]="movementTypes"
-                       [(ngModel)]="newMovement.type"
-                       [placeholder]="i18n.stockMovement.selectType"
-                       class="w-full"></p-dropdown>
+                        [options]="movementTypes"
+                        [(ngModel)]="newMovement.type"
+                        [placeholder]="i18n.stockMovement.selectType"
+                        class="w-full"></p-dropdown>
           </div>
 
           <div class="field">
             <label for="source" class="font-medium">{{i18n.stockMovement.source}}</label>
             <p-dropdown id="source"
-                       [options]="movementSources"
-                       [(ngModel)]="newMovement.source"
-                       [placeholder]="i18n.stockMovement.selectSource"
-                       class="w-full"></p-dropdown>
+                        [options]="movementSources"
+                        [(ngModel)]="newMovement.source"
+                        [placeholder]="i18n.stockMovement.selectSource"
+                        class="w-full"></p-dropdown>
           </div>
 
           <div class="field">
             <label for="quantity" class="font-medium">{{i18n.stockMovement.quantity}}</label>
             <p-inputNumber id="quantity"
-                          [(ngModel)]="newMovement.quantity"
-                          [min]="1"
-                          (onInput)="calculateTotal()"
-                          class="w-full"></p-inputNumber>
+                           [(ngModel)]="newMovement.quantity"
+                           [min]="1"
+                           (onInput)="calculateTotal()"
+                           class="w-full"></p-inputNumber>
           </div>
 
           <div class="field">
@@ -165,12 +172,32 @@ import { FR } from '../../i18n/fr';
         </ng-template>
       </p-dialog>
     </div>
-  `
+  `,
+  styles: [`
+    .badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .badge-success {
+      background-color: var(--green-500);
+      color: white;
+    }
+    
+    .badge-warning {
+      background-color: var(--yellow-500);
+      color: white;
+    }
+  `]
 })
 export class StockMovementComponent implements OnInit {
   movements: StockMovement[] = [];
   stockItems: StockItem[] = [];
   displayDialog = false;
+  loading = false;
+  totalRecords = 0;
   selectedStockItem: StockItem | null = null;
 
   movementTypes = [
@@ -183,43 +210,23 @@ export class StockMovementComponent implements OnInit {
     value: source
   }));
 
-  newMovement: StockMovement = {
-    id: 0,
-    stockItemId: 0,
-    stockItemName: '',
-    quantity: 1,
-    type: MovementType.IN,
-    source: MovementSource.PURCHASE,
-    date: new Date(),
-    unitPrice: 0,
-    totalPrice: 0
-  };
+  newMovement: StockMovement = this.getEmptyMovement();
 
   i18n = FR;
 
   constructor(
-    private mockDataService: MockDataService,
-    private messageService: MessageService
+      private stockMovementService: StockMovementService,
+      private stockItemService: StockItemService,
+      private messageService: MessageService
   ) {}
 
   ngOnInit() {
-    this.loadData();
+    this.loadMovements({ first: 0, rows: 10 });
+    this.loadStockItems();
   }
 
-  loadData() {
-    this.mockDataService.getStockItems().subscribe(items => {
-      this.stockItems = items;
-    });
-
-    this.mockDataService.getStockMovements().subscribe(movements => {
-      this.movements = movements.sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-    });
-  }
-
-  showDialog() {
-    this.newMovement = {
+  getEmptyMovement(): StockMovement {
+    return {
       id: 0,
       stockItemId: 0,
       stockItemName: '',
@@ -230,6 +237,50 @@ export class StockMovementComponent implements OnInit {
       unitPrice: 0,
       totalPrice: 0
     };
+  }
+
+  loadMovements(event: any) {
+    this.loading = true;
+    const pageRequest = {
+      page: Math.floor(event.first / event.rows),
+      size: event.rows,
+      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined
+    };
+
+    this.stockMovementService.getStockMovements(pageRequest).subscribe({
+      next: (response) => {
+        this.movements = response.content;
+        this.totalRecords = response.totalElements;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load stock movements'
+        });
+        this.loading = false;
+      }
+    });
+  }
+
+  loadStockItems() {
+    this.stockItemService.getStockItems({ page: 0, size: 1000 }).subscribe({
+      next: (response) => {
+        this.stockItems = response.content;
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load stock items'
+        });
+      }
+    });
+  }
+
+  showDialog() {
+    this.newMovement = this.getEmptyMovement();
     this.selectedStockItem = null;
     this.displayDialog = true;
   }
@@ -249,17 +300,19 @@ export class StockMovementComponent implements OnInit {
   }
 
   calculateTotal() {
-    this.newMovement.totalPrice = this.newMovement.quantity * this.newMovement.unitPrice;
+    if (this.newMovement.quantity && this.newMovement.unitPrice) {
+      this.newMovement.totalPrice = this.newMovement.quantity * this.newMovement.unitPrice;
+    }
   }
 
   isValidMovement(): boolean {
     if (!this.selectedStockItem) return false;
 
     const isValid = !!(
-      this.newMovement.stockItemId &&
-      this.newMovement.quantity > 0 &&
-      this.newMovement.type &&
-      this.newMovement.source
+        this.newMovement.stockItemId &&
+        this.newMovement.quantity > 0 &&
+        this.newMovement.type &&
+        this.newMovement.source
     );
 
     if (this.newMovement.type === MovementType.OUT) {
@@ -271,32 +324,24 @@ export class StockMovementComponent implements OnInit {
 
   saveMovement() {
     if (this.isValidMovement()) {
-      try {
-        this.mockDataService.addStockMovement(this.newMovement).subscribe({
-          next: () => {
-            this.loadData();
-            this.hideDialog();
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: 'Stock movement added successfully'
-            });
-          },
-          error: (error) => {
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: error.message
-            });
-          }
-        });
-      } catch (error: any) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: error.message
-        });
-      }
+      this.stockMovementService.addStockMovement(this.newMovement).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Stock movement added successfully'
+          });
+          this.loadMovements({ first: 0, rows: 10 });
+          this.hideDialog();
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to add stock movement'
+          });
+        }
+      });
     }
   }
 }
