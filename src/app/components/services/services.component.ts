@@ -44,7 +44,7 @@ import { ToastModule } from 'primeng/toast';
                [lazy]="true"
                (onLazyLoad)="loadServices($event)"
                [paginator]="true" 
-               [rows]="10"
+               [rows]="5"
                [totalRecords]="totalRecords"
                [loading]="loading"
                [showCurrentPageReport]="true"
@@ -135,7 +135,7 @@ export class ServicesComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.loadServices({ first: 0, rows: 10 });
+    this.loadServices({ first: 0, rows: 5 });
   }
 
   loadServices(event: any) {
@@ -189,7 +189,7 @@ export class ServicesComponent implements OnInit {
             summary: 'Success',
             detail: 'Service added successfully'
           });
-          this.loadServices({ first: 0, rows: 10 });
+          this.loadServices({ first: 0, rows: 5 });
           this.hideDialog();
         },
         error: (error) => {
@@ -211,7 +211,7 @@ export class ServicesComponent implements OnInit {
           summary: 'Success',
           detail: 'Service deleted successfully'
         });
-        this.loadServices({ first: 0, rows: 10 });
+        this.loadServices({ first: 0, rows: 5 });
       },
       error: (error) => {
         this.messageService.add({

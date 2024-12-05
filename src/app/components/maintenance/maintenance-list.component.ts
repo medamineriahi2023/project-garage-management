@@ -19,7 +19,7 @@ import { FR } from '../../i18n/fr';
       [loading]="loading"
       (onLazyLoad)="loadData.emit($event)"
       [paginator]="true" 
-      [rows]="10"
+      [rows]="5"
       [totalRecords]="totalRecords"
       [showCurrentPageReport]="true"
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"

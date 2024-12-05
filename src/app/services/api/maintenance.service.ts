@@ -26,7 +26,7 @@ export class MaintenanceService extends BaseApiService {
       distinctUntilChanged(),
       switchMap((term: string) => this.getMaintenances({ 
         page: 0, 
-        size: 10, 
+        size: 5, 
         search: term 
       }))
     );

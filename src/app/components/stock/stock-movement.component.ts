@@ -52,7 +52,7 @@ import { FR } from '../../i18n/fr';
                [lazy]="true"
                (onLazyLoad)="loadMovements($event)"
                [paginator]="true" 
-               [rows]="10"
+               [rows]="5"
                [totalRecords]="totalRecords"
                [loading]="loading"
                [showCurrentPageReport]="true"
@@ -221,7 +221,7 @@ export class StockMovementComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.loadMovements({ first: 0, rows: 10 });
+    this.loadMovements({ first: 0, rows: 5 });
     this.loadStockItems();
   }
 
@@ -265,7 +265,7 @@ export class StockMovementComponent implements OnInit {
   }
 
   loadStockItems() {
-    this.stockItemService.getStockItems({ page: 0, size: 1000 }).subscribe({
+    this.stockItemService.getStockItems({ page: 0, size: 5 }).subscribe({
       next: (response) => {
         this.stockItems = response.content;
       },
@@ -331,7 +331,7 @@ export class StockMovementComponent implements OnInit {
             summary: 'Success',
             detail: 'Stock movement added successfully'
           });
-          this.loadMovements({ first: 0, rows: 10 });
+          this.loadMovements({ first: 0, rows: 5 });
           this.hideDialog();
         },
         error: (error) => {

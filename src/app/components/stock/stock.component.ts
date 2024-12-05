@@ -47,7 +47,7 @@ import { FR } from '../../i18n/fr';
         [value]="stockItems" 
         [lazy]="true"
         [paginator]="true" 
-        [rows]="10"
+        [rows]="5"
         [totalRecords]="totalRecords"
         [loading]="loading"
         (onLazyLoad)="loadStockItems($event)"
@@ -201,7 +201,7 @@ export class StockComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.loadStockItems({ first: 0, rows: 10 });
+    this.loadStockItems({ first: 0, rows: 5 });
   }
 
   onGlobalFilter(event: Event) {
@@ -269,7 +269,7 @@ export class StockComponent implements OnInit {
             summary: 'Success',
             detail: 'Stock item added successfully'
           });
-          this.loadStockItems({ first: 0, rows: 10 });
+          this.loadStockItems({ first: 0, rows: 5 });
           this.hideDialog();
         },
         error: (error) => {
