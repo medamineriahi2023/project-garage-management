@@ -22,10 +22,14 @@ export interface DashboardData {
 @Injectable({
   providedIn: 'root'
 })
+
 export class DashboardApiService extends BaseApiService {
-  private endpoint = '/dashboard';
+  private endpoint = '/dashboard'
+
 
   getDashboardData(period: string): Observable<DashboardData> {
     return this.http.get<DashboardData>(`${this.baseUrl}${this.endpoint}?period=${period}`);
   }
+
+
 }

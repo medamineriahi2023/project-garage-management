@@ -199,11 +199,11 @@ export class MaintenanceComponent implements OnInit, OnDestroy {
   private loadInitialData() {
     this.loadServices();
     this.loadStockItems();
-    this.loadMaintenances({ first: 0, rows: 5 });
+    this.loadMaintenances({ first: 0, rows: 10 });
   }
 
   private loadServices() {
-    this.serviceApi.getServices({ page: 0, size: 5}).subscribe({
+    this.serviceApi.getServices({ page: 0, size: 5 }).subscribe({
       next: (response) => {
         this.services = response.content;
       },
@@ -312,7 +312,7 @@ export class MaintenanceComponent implements OnInit, OnDestroy {
             summary: 'Success',
             detail: 'Maintenance added successfully'
           });
-          this.loadMaintenances({ first: 0, rows: 5 });
+          this.loadMaintenances({ first: 0, rows: 10 });
           this.hideDialog();
         },
         error: (error) => {

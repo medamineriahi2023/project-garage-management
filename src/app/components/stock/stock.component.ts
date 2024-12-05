@@ -201,7 +201,7 @@ export class StockComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.loadStockItems({ first: 0, rows: 5 });
+    this.loadStockItems({ first: 0, rows: 10 });
   }
 
   onGlobalFilter(event: Event) {
@@ -269,7 +269,7 @@ export class StockComponent implements OnInit {
             summary: 'Success',
             detail: 'Stock item added successfully'
           });
-          this.loadStockItems({ first: 0, rows: 5 });
+          this.loadStockItems({ first: 0, rows: 10 });
           this.hideDialog();
         },
         error: (error) => {

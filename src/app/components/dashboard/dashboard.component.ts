@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { DropdownModule } from 'primeng/dropdown';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
-import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { DashboardService } from '../../services/dashboard/dashboard.service';
@@ -22,7 +22,6 @@ import { FR } from '../../i18n/fr';
     ToastModule,
     LoadingComponent
   ],
-  providers: [MessageService],
   template: `
     <p-toast></p-toast>
     <div class="card">
@@ -30,11 +29,11 @@ import { FR } from '../../i18n/fr';
         <h2 class="text-2xl font-semibold text-primary m-0">
           <i class="pi pi-chart-line mr-2"></i>{{i18n.dashboard.title}}
         </h2>
-        <p-dropdown [options]="periodOptions" 
-                   [(ngModel)]="selectedPeriod" 
-                   (onChange)="onPeriodChange()"
-                   optionLabel="label"
-                   optionValue="value">
+        <p-dropdown [options]="periodOptions"
+                    [(ngModel)]="selectedPeriod"
+                    (onChange)="onPeriodChange()"
+                    optionLabel="label"
+                    optionValue="value">
         </p-dropdown>
       </div>
 
@@ -121,15 +120,15 @@ import { FR } from '../../i18n/fr';
     :host ::ng-deep .p-card {
       height: 100%;
     }
-    
+
     .percentage-up {
       color: var(--green-500);
     }
-    
+
     .percentage-down {
       color: var(--red-500);
     }
-    
+
     .percentage-neutral {
       color: var(--text-color-secondary);
     }
@@ -183,8 +182,8 @@ export class DashboardComponent implements OnInit {
   };
 
   constructor(
-    private dashboardService: DashboardService,
-    private messageService: MessageService
+      private dashboardService: DashboardService,
+      private messageService: MessageService
   ) {}
 
   ngOnInit() {

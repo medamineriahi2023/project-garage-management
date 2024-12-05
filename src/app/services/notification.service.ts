@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { StockItem } from '../models/stock-item.model';
+import { MessageService } from 'primeng/api';
 
 export interface StockNotification {
   id: number;
@@ -16,6 +17,8 @@ export interface StockNotification {
 export class NotificationService {
   private notifications = new BehaviorSubject<StockNotification[]>([]);
   private lastNotificationId = 0;
+
+  constructor(private messageService: MessageService) {}
 
   getNotifications(): Observable<StockNotification[]> {
     return this.notifications.asObservable();
@@ -36,6 +39,13 @@ export class NotificationService {
     
     if (existingIndex === -1) {
       this.notifications.next([notification, ...currentNotifications]);
+      // Show toast notification
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Alerte Stock',
+        detail: notification.message,
+        life: 5000
+      });
     } else {
       // Update existing notification
       currentNotifications[existingIndex] = notification;
@@ -70,5 +80,11 @@ export class NotificationService {
 
   clearAllNotifications(): void {
     this.notifications.next([]);
+  }
+
+  checkStockLevel(stockItem: StockItem): void {
+    if (stockItem.currentQuantity <= stockItem.minQuantity) {
+      this.addNotification(stockItem);
+    }
   }
 }

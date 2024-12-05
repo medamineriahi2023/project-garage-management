@@ -14,6 +14,10 @@ export class StockItemService extends BaseApiService {
     return this.getWithPagination<StockItem>(this.endpoint, pageRequest);
   }
 
+  getStockItem(id: number): Observable<StockItem> {
+    return this.http.get<StockItem>(`${this.baseUrl}${this.endpoint}/${id}`);
+  }
+
   addStockItem(item: StockItem): Observable<StockItem> {
     return this.post<StockItem>(this.endpoint, item);
   }

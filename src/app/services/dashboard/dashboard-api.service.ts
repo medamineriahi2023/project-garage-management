@@ -12,7 +12,7 @@ export class DashboardApiService extends BaseApiService {
 
   getDashboardData(period: string): Observable<DashboardData> {
     return this.http.get<DashboardData>(`${this.baseUrl}${this.endpoint}`, {
-      params: { period }
+      params: { period }, headers: this.headers
     });
   }
 }
