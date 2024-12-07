@@ -144,7 +144,6 @@ export class LazyMultiselectComponent implements OnInit, OnDestroy {
       next: (response: PageResponse<StockItem>) => {
         const selectedIds = new Set(this.selectedItems?.map(item => item.id));
         const newItems = response.content.filter((item: StockItem) => !selectedIds.has(item.id));
-        console.log(response);
         if (this.page === 0) {
           this.items = [...this.selectedItems, ...newItems];
         } else {

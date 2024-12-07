@@ -1,17 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { RouterModule, Routes, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { MessageService } from 'primeng/api';
+import { Subscription } from 'rxjs';
 import { DashboardComponent } from './app/components/dashboard/dashboard.component';
 import { ServicesComponent } from './app/components/services/services.component';
 import { StockComponent } from './app/components/stock/stock.component';
 import { MaintenanceComponent } from './app/components/maintenance/maintenance.component';
 import { StockMovementComponent } from './app/components/stock/stock-movement.component';
 import { NotificationBellComponent } from './app/components/notifications/notification-bell.component';
-import { FR } from './app/i18n/fr';
+import { LanguageSelectorComponent } from './app/components/language-selector/language-selector.component';
+import { LanguageService } from './app/services/language.service';
+import { Translations } from './app/services/language.service';
 
 const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -25,9 +28,9 @@ const routes: Routes = [
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterModule, NotificationBellComponent],
+  imports: [CommonModule, RouterModule, NotificationBellComponent, LanguageSelectorComponent],
   template: `
-    <div class="layout-wrapper">
+    <div class="layout-wrapper" [dir]="currentLang === 'ar' ? 'rtl' : 'ltr'">
       <div class="layout-topbar">
         <div class="flex align-items-center gap-2">
           <i class="pi pi-car text-2xl"></i>
@@ -50,6 +53,7 @@ const routes: Routes = [
             <i class="pi pi-history mr-2"></i>{{i18n.navigation.stockMovement}}
           </a>
           <app-notification-bell></app-notification-bell>
+          <app-language-selector></app-language-selector>
         </div>
       </div>
       <div class="layout-content">
@@ -75,8 +79,23 @@ const routes: Routes = [
     }
   `]
 })
-export class App {
-  i18n = FR;
+export class App implements OnInit, OnDestroy {
+  i18n!: Translations;
+  currentLang: 'fr' | 'ar' = 'fr';
+  private langSubscription?: Subscription;
+
+  constructor(private languageService: LanguageService) {}
+
+  ngOnInit() {
+    this.langSubscription = this.languageService.currentLang$.subscribe(lang => {
+      this.currentLang = lang;
+      this.i18n = this.languageService.getTranslations();
+    });
+  }
+
+  ngOnDestroy() {
+    this.langSubscription?.unsubscribe();
+  }
 }
 
 bootstrapApplication(App, {
@@ -84,6 +103,7 @@ bootstrapApplication(App, {
     provideAnimations(),
     provideRouter(routes),
     provideHttpClient(),
-    MessageService // Add MessageService as a root provider
+    MessageService,
+    LanguageService
   ]
 });

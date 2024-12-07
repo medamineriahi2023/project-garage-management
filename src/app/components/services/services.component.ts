@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -9,9 +9,10 @@ import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Service } from '../../models/service.model';
 import { ServiceApiService } from '../../services/api/service.service';
-import { FR } from '../../i18n/fr';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { LanguageService, Translations } from '../../services/language.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-services',
@@ -115,11 +116,13 @@ import { ToastModule } from 'primeng/toast';
     </div>
   `
 })
-export class ServicesComponent implements OnInit {
+export class ServicesComponent implements OnInit, OnDestroy {
   services: Service[] = [];
   displayDialog = false;
   loading = false;
   totalRecords = 0;
+  i18n!: Translations;
+  private langSubscription?: Subscription;
   
   newService: Service = {
     id: 0,
@@ -127,15 +130,23 @@ export class ServicesComponent implements OnInit {
     price: 0
   };
 
-  i18n = FR;
-
   constructor(
     private serviceApi: ServiceApiService,
-    private messageService: MessageService
-  ) {}
+    private messageService: MessageService,
+    private languageService: LanguageService
+  ) {
+    this.i18n = this.languageService.getTranslations();
+  }
 
   ngOnInit() {
     this.loadServices({ first: 0, rows: 10 });
+    this.langSubscription = this.languageService.currentLang$.subscribe(() => {
+      this.i18n = this.languageService.getTranslations();
+    });
+  }
+
+  ngOnDestroy() {
+    this.langSubscription?.unsubscribe();
   }
 
   loadServices(event: any) {

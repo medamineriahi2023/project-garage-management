@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -12,11 +12,15 @@ import { CalendarModule } from 'primeng/calendar';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
-import {MovementSource, MovementType, StockMovement} from "../../models/stock-movement.model";
-import {FR} from "../../i18n/fr";
-import {StockMovementService} from "../../services/api/stock-movement.service";
-import {StockItemService} from "../../services/api/stock-item.service";
-import {StockItem} from "../../models";
+import { MovementSource, MovementType, StockMovement } from "../../models/stock-movement.model";
+import { StockMovementService } from "../../services/api/stock-movement.service";
+import { StockItemService } from "../../services/api/stock-item.service";
+import { StockItem } from "../../models";
+import { StockMovementFiltersComponent } from './stock-movement-filters.component';
+import { StockMovementFilters } from '../../models/stock-filters.model';
+import { LanguageService, Translations } from '../../services/language.service';
+import { Subscription } from 'rxjs';
+import { PageResponse } from '../../models/pagination.model';
 
 @Component({
   selector: 'app-stock-movement',
@@ -33,7 +37,8 @@ import {StockItem} from "../../models";
     DropdownModule,
     CalendarModule,
     TooltipModule,
-    ToastModule
+    ToastModule,
+    StockMovementFiltersComponent
   ],
   providers: [MessageService],
   template: `
@@ -47,6 +52,11 @@ import {StockItem} from "../../models";
                 icon="pi pi-plus"
                 (click)="showDialog()"></button>
       </div>
+
+      <app-stock-movement-filters
+        [filters]="filters"
+        (filtersChange)="onFiltersChange($event)">
+      </app-stock-movement-filters>
 
       <p-table [value]="movements"
                [lazy]="true"
@@ -80,7 +90,7 @@ import {StockItem} from "../../models";
                 {{movement.type === 'IN' ? i18n.stockMovement.in : i18n.stockMovement.out}}
               </span>
             </td>
-            <td>{{movement.source}}</td>
+            <td>{{ sourcesMap.get(movement.source) || 'Unknown Source' }}</td>
             <td>{{movement.quantity}}</td>
             <td>{{movement.unitPrice | currency:'TND'}}</td>
             <td>{{movement.totalPrice | currency:'TND'}}</td>
@@ -192,37 +202,82 @@ import {StockItem} from "../../models";
     }
   `]
 })
-export class StockMovementComponent implements OnInit {
+export class StockMovementComponent implements OnInit, OnDestroy {
   movements: StockMovement[] = [];
   stockItems: StockItem[] = [];
   displayDialog = false;
   isLoading = false;
   totalRecords = 0;
   selectedStockItem: StockItem | null = null;
+  filters: StockMovementFilters = {};
+  i18n!: Translations;
+  private langSubscription?: Subscription;
 
   movementTypes = [
-    { label: 'Entrée', value: MovementType.IN },
-    { label: 'Sortie', value: MovementType.OUT }
+    { label: this.getMovementTypeLabel('IN'), value: MovementType.IN },
+    { label: this.getMovementTypeLabel('OUT'), value: MovementType.OUT }
   ];
 
   movementSources = Object.values(MovementSource).map(source => ({
-    label: source,
+    label: this.getSourceLabel(source),
     value: source
   }));
 
   newMovement: StockMovement = this.getEmptyMovement();
-
-  i18n = FR;
+  sourcesMap: Map<string, string> = new Map<string, string>();
 
   constructor(
-      private stockMovementService: StockMovementService,
-      private stockItemService: StockItemService,
-      private messageService: MessageService,
-      private cdr: ChangeDetectorRef
-  ) {}
+    private stockMovementService: StockMovementService,
+    private stockItemService: StockItemService,
+    private messageService: MessageService,
+    private languageService: LanguageService
+  ) {
+    this.i18n = this.languageService.getTranslations();
+    this.updateLabels();
+  }
 
   ngOnInit() {
     this.loadInitialData();
+    this.langSubscription = this.languageService.currentLang$.subscribe(() => {
+      this.i18n = this.languageService.getTranslations();
+      this.updateLabels();
+    });
+  }
+
+  ngOnDestroy() {
+    this.langSubscription?.unsubscribe();
+  }
+
+  private updateLabels() {
+    this.sourcesMap = new Map<string, string>(
+        Object.entries(this.i18n.stockMovement.sources)
+    );
+    this.movementTypes = [
+      { label: this.getMovementTypeLabel('IN'), value: MovementType.IN },
+      { label: this.getMovementTypeLabel('OUT'), value: MovementType.OUT }
+    ];
+
+    this.movementSources = Object.values(MovementSource).map(source => ({
+      label: this.getSourceLabel(source),
+      value: source
+    }));
+  }
+
+  private getMovementTypeLabel(type: string): string {
+    if (!this.i18n || !this.i18n.stockMovement) {
+      console.error('i18n is not initialized.');
+      return '';
+    }
+    return type === 'IN' ? this.i18n.stockMovement.in : this.i18n.stockMovement.out;
+  }
+
+  private getSourceLabel(source: MovementSource): string {
+    return this.i18n?.stockMovement.sources[source] || 'Unknown Source';
+  }
+
+  onFiltersChange(filters: StockMovementFilters) {
+    this.filters = filters;
+    this.loadMovements({ first: 0, rows: 10 });
   }
 
   private loadInitialData(): void {
@@ -246,40 +301,37 @@ export class StockMovementComponent implements OnInit {
 
   loadMovements(event: any) {
     this.isLoading = true;
-    this.cdr.detectChanges();
 
     const pageRequest = {
       page: Math.floor(event.first / event.rows),
       size: event.rows,
-      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined
+      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined,
+      ...this.filters
     };
 
     this.stockMovementService.getStockMovements(pageRequest).subscribe({
-      next: (response) => {
+      next: (response: PageResponse<StockMovement>) => {
         this.movements = response.content;
         this.totalRecords = response.totalElements;
         this.isLoading = false;
-        this.cdr.detectChanges();
       },
-      error: (error) => {
+      error: (error: Error) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
           detail: 'Failed to load stock movements'
         });
         this.isLoading = false;
-        this.cdr.detectChanges();
       }
     });
   }
 
   loadStockItems() {
-    this.stockItemService.getStockItems({ page: 0, size: 5 }).subscribe({
-      next: (response) => {
+    this.stockItemService.getStockItems({ page: 0, size: 1000 }).subscribe({
+      next: (response: PageResponse<StockItem>) => {
         this.stockItems = response.content;
-        this.cdr.detectChanges();
       },
-      error: (error) => {
+      error: (error: Error) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -319,10 +371,10 @@ export class StockMovementComponent implements OnInit {
     if (!this.selectedStockItem) return false;
 
     const isValid = !!(
-        this.newMovement.stockItemId &&
-        this.newMovement.quantity > 0 &&
-        this.newMovement.type &&
-        this.newMovement.source
+      this.newMovement.stockItemId &&
+      this.newMovement.quantity > 0 &&
+      this.newMovement.type &&
+      this.newMovement.source
     );
 
     if (this.newMovement.type === MovementType.OUT) {
@@ -344,7 +396,7 @@ export class StockMovementComponent implements OnInit {
           this.loadMovements({ first: 0, rows: 10 });
           this.hideDialog();
         },
-        error: (error) => {
+        error: (error: Error) => {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',

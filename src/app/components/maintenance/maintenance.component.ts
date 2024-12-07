@@ -22,7 +22,7 @@ import { MaintenanceService } from '../../services/api/maintenance.service';
 import { ServiceApiService } from '../../services/api/service.service';
 import { StockItemService } from '../../services/api/stock-item.service';
 import { PdfService } from '../../services/pdf.service';
-import { FR } from '../../i18n/fr';
+import { LanguageService, Translations } from '../../services/language.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -157,27 +157,33 @@ export class MaintenanceComponent implements OnInit, OnDestroy {
   loading = false;
   totalRecords = 0;
   private searchSubscription?: Subscription;
+  private langSubscription?: Subscription;
 
   newMaintenance: Maintenance = this.getEmptyMaintenance();
-  i18n = FR;
+  i18n!: Translations;
 
   constructor(
       private maintenanceService: MaintenanceService,
       private serviceApi: ServiceApiService,
       private stockItemService: StockItemService,
       private pdfService: PdfService,
-      private messageService: MessageService
-  ) {}
+      private messageService: MessageService,
+      private languageService: LanguageService
+  ) {
+    this.i18n = this.languageService.getTranslations();
+  }
 
   ngOnInit() {
     this.loadInitialData();
     this.setupSearch();
+    this.langSubscription = this.languageService.currentLang$.subscribe(() => {
+      this.i18n = this.languageService.getTranslations();
+    });
   }
 
   ngOnDestroy() {
-    if (this.searchSubscription) {
-      this.searchSubscription.unsubscribe();
-    }
+    this.searchSubscription?.unsubscribe();
+    this.langSubscription?.unsubscribe();
   }
 
   private setupSearch() {

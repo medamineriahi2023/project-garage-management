@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
@@ -12,7 +12,10 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { StockItem } from '../../models/stock-item.model';
 import { StockItemService } from '../../services/api/stock-item.service';
-import { FR } from '../../i18n/fr';
+import { StockFiltersComponent } from './stock-filters.component';
+import { LanguageService, Translations } from '../../services/language.service';
+import { Subscription } from 'rxjs';
+import { StockFilters } from '../../models/stock-filters.model';
 
 @Component({
   selector: 'app-stock',
@@ -27,7 +30,8 @@ import { FR } from '../../i18n/fr';
     DialogModule,
     TooltipModule,
     TagModule,
-    ToastModule
+    ToastModule,
+    StockFiltersComponent
   ],
   providers: [MessageService],
   template: `
@@ -41,6 +45,11 @@ import { FR } from '../../i18n/fr';
                 icon="pi pi-plus" 
                 (click)="showDialog()"></button>
       </div>
+
+      <app-stock-filters
+        [filters]="filters"
+        (filtersChange)="onFiltersChange($event)">
+      </app-stock-filters>
 
       <p-table 
         #dt
@@ -57,20 +66,6 @@ import { FR } from '../../i18n/fr';
         [globalFilterFields]="['name']"
         styleClass="p-datatable-gridlines">
         
-        <ng-template pTemplate="caption">
-          <div class="flex justify-content-between align-items-center">
-            <span class="p-input-icon-left">
-              <i class="pi pi-search"></i>
-              <input 
-                pInputText 
-                type="text" 
-                (input)="onGlobalFilter($event)"
-                [placeholder]="i18n.common.search"
-              />
-            </span>
-          </div>
-        </ng-template>
-
         <ng-template pTemplate="header">
           <tr>
             <th pSortableColumn="id">{{i18n.common.id}} <p-sortIcon field="id"></p-sortIcon></th>
@@ -176,13 +171,16 @@ import { FR } from '../../i18n/fr';
     </div>
   `
 })
-export class StockComponent implements OnInit {
+export class StockComponent implements OnInit, OnDestroy {
   @ViewChild('dt') table!: Table;
   
   stockItems: StockItem[] = [];
   displayDialog = false;
   loading = false;
   totalRecords = 0;
+  filters: StockFilters = { status: 'ALL' };
+  i18n!: Translations;
+  private langSubscription?: Subscription;
   
   newItem: StockItem = {
     id: 0,
@@ -193,20 +191,28 @@ export class StockComponent implements OnInit {
     realPrice: 0
   };
 
-  i18n = FR;
-
   constructor(
     private stockItemService: StockItemService,
-    private messageService: MessageService
-  ) {}
+    private messageService: MessageService,
+    private languageService: LanguageService
+  ) {
+    this.i18n = this.languageService.getTranslations();
+  }
 
   ngOnInit() {
     this.loadStockItems({ first: 0, rows: 10 });
+    this.langSubscription = this.languageService.currentLang$.subscribe(() => {
+      this.i18n = this.languageService.getTranslations();
+    });
   }
 
-  onGlobalFilter(event: Event) {
-    const element = event.target as HTMLInputElement;
-    this.table.filterGlobal(element.value, 'contains');
+  ngOnDestroy() {
+    this.langSubscription?.unsubscribe();
+  }
+
+  onFiltersChange(filters: StockFilters) {
+    this.filters = filters;
+    this.loadStockItems({ first: 0, rows: 10 });
   }
 
   loadStockItems(event: any) {
@@ -214,7 +220,8 @@ export class StockComponent implements OnInit {
     const pageRequest = {
       page: Math.floor(event.first / event.rows),
       size: event.rows,
-      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined
+      sort: event.sortField ? [`${event.sortField},${event.sortOrder === 1 ? 'asc' : 'desc'}`] : undefined,
+      ...this.filters
     };
     
     this.stockItemService.getStockItems(pageRequest).subscribe({

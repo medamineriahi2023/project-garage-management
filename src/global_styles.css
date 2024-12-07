@@ -18,6 +18,22 @@ body {
   color: var(--text-color);
 }
 
+/* RTL Support */
+[dir="rtl"] .pi {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+[dir="rtl"] .mr-2 {
+  margin-right: 0 !important;
+  margin-left: 0.5rem !important;
+}
+
+[dir="rtl"] .layout-topbar .topbar-link i {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
 .layout-wrapper {
   min-height: 100vh;
 }

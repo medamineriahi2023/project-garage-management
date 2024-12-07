@@ -1,11 +1,12 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { LoadingComponent } from '../shared/loading/loading.component';
 import { Maintenance } from '../../models/maintenance.model';
-import { FR } from '../../i18n/fr';
+import { LanguageService, Translations } from '../../services/language.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-maintenance-list',
@@ -70,12 +71,27 @@ import { FR } from '../../i18n/fr';
     </p-table>
   `
 })
-export class MaintenanceListComponent {
+export class MaintenanceListComponent implements OnInit, OnDestroy {
   @Input() maintenances: Maintenance[] = [];
   @Input() loading = false;
   @Input() totalRecords = 0;
   @Output() generatePdf = new EventEmitter<Maintenance>();
   @Output() loadData = new EventEmitter<any>();
   
-  i18n = FR;
+  i18n!: Translations;
+  private langSubscription?: Subscription;
+
+  constructor(private languageService: LanguageService) {
+    this.i18n = this.languageService.getTranslations();
+  }
+
+  ngOnInit() {
+    this.langSubscription = this.languageService.currentLang$.subscribe(() => {
+      this.i18n = this.languageService.getTranslations();
+    });
+  }
+
+  ngOnDestroy() {
+    this.langSubscription?.unsubscribe();
+  }
 }

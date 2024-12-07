@@ -58,7 +58,9 @@ export const FR = {
     unitPrice: 'Prix Unitaire',
     realPrice: 'Prix de Vente',
     lowStock: 'Stock Bas',
-    inStock: 'En Stock'
+    inStock: 'En Stock',
+    filterByStatus: 'Filtrer par statut',
+    all: 'Tous'
   },
   stockMovement: {
     title: 'Mouvements de Stock',
@@ -76,6 +78,10 @@ export const FR = {
     selectItem: 'Sélectionner un article',
     selectType: 'Sélectionner un type',
     selectSource: 'Sélectionner une source',
+    startDate: 'Date début',
+    endDate: 'Date fin',
+    filterByType: 'Filtrer par type',
+    filterBySource: 'Filtrer par source',
     sources: {
       PURCHASE: 'Achat',
       MAINTENANCE: 'Maintenance',

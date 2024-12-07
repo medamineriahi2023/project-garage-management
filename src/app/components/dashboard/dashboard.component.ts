@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DropdownModule } from 'primeng/dropdown';
@@ -8,7 +8,8 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { DashboardService } from '../../services/dashboard/dashboard.service';
 import { LoadingComponent } from '../shared/loading/loading.component';
-import { FR } from '../../i18n/fr';
+import { LanguageService, Translations } from '../../services/language.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -134,8 +135,9 @@ import { FR } from '../../i18n/fr';
     }
   `]
 })
-export class DashboardComponent implements OnInit {
-  i18n = FR;
+export class DashboardComponent implements OnInit, OnDestroy {
+  i18n!: Translations;
+  private langSubscription?: Subscription;
   selectedPeriod = 'month';
   loading = true;
   periodOptions = [
@@ -182,12 +184,42 @@ export class DashboardComponent implements OnInit {
   };
 
   constructor(
-      private dashboardService: DashboardService,
-      private messageService: MessageService
-  ) {}
+    private dashboardService: DashboardService,
+    private messageService: MessageService,
+    private languageService: LanguageService
+  ) {
+    this.i18n = this.languageService.getTranslations();
+  }
 
   ngOnInit() {
     this.loadDashboardData();
+    this.langSubscription = this.languageService.currentLang$.subscribe(() => {
+      this.i18n = this.languageService.getTranslations();
+      this.updatePeriodOptions();
+    });
+  }
+
+  ngOnDestroy() {
+    this.langSubscription?.unsubscribe();
+  }
+
+  private updatePeriodOptions() {
+    const currentLang = this.languageService.getCurrentLanguage();
+    if (currentLang === 'ar') {
+      this.periodOptions = [
+        { label: 'يوم', value: 'day' },
+        { label: 'أسبوع', value: 'week' },
+        { label: 'شهر', value: 'month' },
+        { label: 'سنة', value: 'year' }
+      ];
+    } else {
+      this.periodOptions = [
+        { label: 'Jour', value: 'day' },
+        { label: 'Semaine', value: 'week' },
+        { label: 'Mois', value: 'month' },
+        { label: 'Année', value: 'year' }
+      ];
+    }
   }
 
   onPeriodChange() {
