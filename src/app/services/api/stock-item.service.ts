@@ -15,7 +15,7 @@ export class StockItemService extends BaseApiService {
   }
 
   getStockItem(id: number): Observable<StockItem> {
-    return this.http.get<StockItem>(`${this.baseUrl}${this.endpoint}/${id}`);
+    return this.http.get<StockItem>(`${this.baseUrl}${this.endpoint}/${id}`, { headers: this.headers });
   }
 
   addStockItem(item: StockItem): Observable<StockItem> {
@@ -28,5 +28,15 @@ export class StockItemService extends BaseApiService {
 
   deleteStockItem(id: number): Observable<void> {
     return this.delete(`${this.endpoint}/${id}`);
+  }
+
+  getEquipment(pageRequest: PageRequest & { search?: string }): Observable<PageResponse<StockItem>> {
+    let params = this.buildBaseParams(pageRequest);
+    if (pageRequest.search) {
+      params = params.set('search', pageRequest.search);
+    }
+    return this.http.get<PageResponse<StockItem>>(`${this.baseUrl}${this.endpoint}`, 
+      { params, headers: this.headers }
+    );
   }
 }

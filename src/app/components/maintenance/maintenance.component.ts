@@ -14,6 +14,7 @@ import { MessageService } from 'primeng/api';
 import { MaintenanceFiltersComponent } from './maintenance-filters.component';
 import { MaintenanceListComponent } from './maintenance-list.component';
 import { LoadingComponent } from '../shared/loading/loading.component';
+import { LazyMultiselectComponent } from '../shared/lazy-multiselect/lazy-multiselect.component';
 import { Service } from '../../models/service.model';
 import { StockItem } from '../../models/stock-item.model';
 import { Maintenance } from '../../models/maintenance.model';
@@ -41,6 +42,7 @@ import { Subscription } from 'rxjs';
     ToastModule,
     MaintenanceFiltersComponent,
     MaintenanceListComponent,
+    LazyMultiselectComponent
   ],
   providers: [MessageService],
   template: `
@@ -101,13 +103,12 @@ import { Subscription } from 'rxjs';
 
           <div class="field">
             <label for="equipment" class="font-medium">{{i18n.maintenance.equipmentUsed}}</label>
-            <p-multiSelect id="equipment"
-                           [options]="stockItems"
-                           [(ngModel)]="selectedEquipment"
-                           optionLabel="name"
-                           (onChange)="onEquipmentChange()"
-                           [placeholder]="i18n.maintenance.equipmentUsed"
-                           class="w-full"></p-multiSelect>
+            <app-lazy-multiselect
+              [(selectedItems)]="selectedEquipment"
+              (selectionChange)="onEquipmentChange()"
+              [placeholder]="i18n.maintenance.equipmentUsed"
+              containerClass="w-full">
+            </app-lazy-multiselect>
           </div>
 
           <div class="field">
