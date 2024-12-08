@@ -15,7 +15,9 @@ export const FR = {
     services: 'Services',
     stock: 'Stock',
     maintenance: 'Maintenance',
-    stockMovement: 'Mouvements de Stock'
+    stockMovement: 'Mouvements de Stock',
+    users: 'Utilisateurs',
+    roles: 'Rôles'
   },
   dashboard: {
     title: 'Tableau de bord',

@@ -2,9 +2,10 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { FR } from '../i18n/fr';
 import { AR } from '../i18n/ar';
+import { Translations } from '../models/translations.model';
 
 export type Language = 'fr' | 'ar';
-export type Translations = typeof FR;
+export { Translations };
 
 @Injectable({
   providedIn: 'root'

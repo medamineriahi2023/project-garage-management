@@ -15,7 +15,9 @@ export const AR = {
     services: 'الخدمات',
     stock: 'المخزون',
     maintenance: 'الصيانة',
-    stockMovement: 'حركة المخزون'
+    stockMovement: 'حركة المخزون',
+    users: 'المستخدمون',
+    roles: 'الأدوار'
   },
   dashboard: {
     title: 'لوحة التحكم',
@@ -41,10 +43,7 @@ export const AR = {
     generatePdf: 'إنشاء ملف PDF',
     discount: 'الخصم',
     subtotal: 'المجموع الفرعي',
-    finalPrice: 'السعر النهائي',
-    selectItem: 'اختر عنصراً',
-    selectType: 'اختر النوع',
-    selectSource: 'اختر المصدر'
+    finalPrice: 'السعر النهائي'
   },
   services: {
     title: 'إدارة الخدمات',
@@ -63,13 +62,7 @@ export const AR = {
     lowStock: 'مخزون منخفض',
     inStock: 'متوفر',
     filterByStatus: 'تصفية حسب الحالة',
-    all: 'الكل',
-    stockAlert: 'تنبيه المخزون',
-    stockLow: 'المخزون منخفض',
-    addItem: 'إضافة منتج',
-    editItem: 'تعديل منتج',
-    deleteItem: 'حذف منتج',
-    confirmDelete: 'هل أنت متأكد من حذف هذا المنتج؟'
+    all: 'الكل'
   },
   stockMovement: {
     title: 'حركة المخزون',
@@ -96,15 +89,6 @@ export const AR = {
       MAINTENANCE: 'صيانة',
       RETURN: 'إرجاع',
       ADJUSTMENT: 'تعديل'
-    },
-    confirmDelete: 'هل أنت متأكد من حذف هذه الحركة؟',
-    movement: 'حركة',
-    date: 'التاريخ',
-    status: 'الحالة',
-    addSuccess: 'تمت إضافة الحركة بنجاح',
-    updateSuccess: 'تم تحديث الحركة بنجاح',
-    deleteSuccess: 'تم حذف الحركة بنجاح',
-    error: 'حدث خطأ',
-    insufficientStock: 'الكمية المتوفرة غير كافية'
+    }
   }
 };
