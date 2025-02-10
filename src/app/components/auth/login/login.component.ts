@@ -30,7 +30,8 @@ import { LayoutService } from '../../../services/layout.service';
       <p-card styleClass="shadow-2 w-30rem">
         <div class="text-center mb-5">
           <div class="text-900 text-3xl font-medium mb-3">Welcome Back</div>
-          <span class="text-600 font-medium">Sign in to continue</span>
+          <span class="text-600 font-medium">Sign in to continue</span><br>
+          <span class="text-blue-500 font-small">login with admin/admin</span>
         </div>
 
         <div class="flex flex-column gap-3">
@@ -66,11 +67,16 @@ import { LayoutService } from '../../../services/layout.service';
         </div>
       </p-card>
     </div>
-  `
+  `,
+  styles: [`
+  ::ng-deep .p-password input {
+  width: 100% !important;
+}
+  `]
 })
 export class LoginComponent implements OnInit {
-  username: string = '';
-  password: string = '';
+  username: string = 'admin';
+  password: string = 'admin';
 
   constructor(
     private authService: AuthService,
