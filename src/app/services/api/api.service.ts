@@ -41,7 +41,7 @@ export interface PageResponse<T> {
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'https://439f-197-26-59-239.ngrok-free.app/api';
+  private baseUrl = 'https://e24a-41-225-153-68.ngrok-free.app/api';
   private headers = new HttpHeaders({
     'ngrok-skip-browser-warning': 'true'
   });
